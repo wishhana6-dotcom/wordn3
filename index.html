@@ -219,6 +219,19 @@
   .fc-btn:disabled{opacity:0.4; cursor:default;}
   .fc-empty{max-width:420px; text-align:center; padding:50px 20px; color:var(--ink-soft); font-size:14px;}
   .fc-empty .big{font-family:'Noto Sans KR',sans-serif; font-weight:800; font-size:19px; color:var(--ink); display:block; margin-bottom:8px;}
+  .fc-classified{display:none; width:100%; max-width:760px;}
+  .classified-summary{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; color:var(--ink-soft); font-size:12.5px;}
+  .classified-summary strong{font-size:15px; color:var(--ink);}
+  .classified-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px;}
+  .classified-item{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; min-height:64px; padding:10px 11px 10px 14px; background:var(--paper); border-radius:var(--radius-m); box-shadow:var(--shadow-card);}
+  .classified-word-line{display:flex; align-items:baseline; gap:8px; min-width:0;}
+  .classified-word{font-family:'Noto Sans JP',sans-serif; font-size:17px; font-weight:700; white-space:nowrap;}
+  .classified-reading{font-family:'Noto Sans JP',sans-serif; font-size:11px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .classified-meaning{margin-top:2px; color:var(--basil-deep); font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .classified-move{padding:7px 9px; border-radius:var(--radius-s); border:1px solid var(--line); background:var(--bg); color:var(--ink-soft); font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .classified-move.to-known{border-color:var(--basil); color:var(--basil-deep); background:var(--basil-pale);}
+  .classified-move.to-unknown{border-color:var(--tomato); color:var(--tomato); background:var(--tomato-pale);}
+  @media (max-width:680px){.classified-grid{grid-template-columns:1fr;}.classified-item{min-height:58px;}.classified-move{padding:7px 8px;}}
 
   /* ---------- Word list ---------- */
   .search-row{display:flex; gap:8px; margin-bottom:6px;}
@@ -389,6 +402,7 @@
           <button class="fc-btn no" id="fc-no">✕ 모르겠어요</button>
           <button class="fc-btn yes" id="fc-yes">✓ 알아요</button>
         </div>
+        <div class="fc-classified" id="fc-classified"></div>
       </div>
     </section>
 
@@ -696,13 +710,17 @@ import {
   function buildDeck(){
     fcDeck=[];
     for(var i=0;i<WORDS.length;i++){ if(matchesFilter(WORDS[i], i, fcFilter)) fcDeck.push(i); }
-    for(var i2=fcDeck.length-1;i2>0;i2--){
-      var j=Math.floor(Math.random()*(i2+1));
-      var t=fcDeck[i2]; fcDeck[i2]=fcDeck[j]; fcDeck[j]=t;
+    if(!isClassifiedMode()){
+      for(var i2=fcDeck.length-1;i2>0;i2--){
+        var j=Math.floor(Math.random()*(i2+1));
+        var t=fcDeck[i2]; fcDeck[i2]=fcDeck[j]; fcDeck[j]=t;
+      }
     }
     fcIndex=0;
     showCard();
   }
+
+  function isClassifiedMode(){ return fcFilter==='known' || fcFilter==='unknown'; }
 
   var cardEl=document.getElementById('fc-card');
   var wordEl=document.getElementById('fc-word');
@@ -718,10 +736,20 @@ import {
   var fcScene=document.getElementById('fc-scene');
   var fcNoBtn=document.getElementById('fc-no');
   var fcYesBtn=document.getElementById('fc-yes');
+  var fcProgressEl=document.querySelector('.fc-progress');
+  var fcControlsEl=document.querySelector('.fc-controls');
+  var fcClassifiedEl=document.getElementById('fc-classified');
 
   var faceFrontEl=document.querySelector('#fc-card .face.front');
   var faceBackEl=document.querySelector('#fc-card .face.back');
   function showCard(){
+    if(isClassifiedMode()){
+      renderClassifiedList();
+      return;
+    }
+    fcClassifiedEl.style.display='none';
+    fcProgressEl.style.display='flex';
+    fcControlsEl.style.display='flex';
     fcFlipped=false;
     faceFrontEl.classList.add('showing');
     faceBackEl.classList.remove('showing');
@@ -762,6 +790,42 @@ import {
     fcBar.style.width=((fcIndex)/fcDeck.length*100)+'%';
   }
 
+  function renderClassifiedList(){
+    var oldEmpty=document.getElementById('fc-empty-msg');
+    if(oldEmpty) oldEmpty.remove();
+    fcProgressEl.style.display='none';
+    fcScene.style.display='none';
+    fcControlsEl.style.display='none';
+    fcClassifiedEl.style.display='block';
+    var isKnown=fcFilter==='known';
+    var title=isKnown?'✓ 알아요':'✕ 모르겠어요';
+    if(!fcDeck.length){
+      fcClassifiedEl.innerHTML='<div class="fc-empty"><span class="big">'+title+' 목록이 비어 있어요</span>플래시카드에서 버튼을 누르면 여기에 모입니다.</div>';
+      return;
+    }
+    var rows='';
+    fcDeck.forEach(function(id){
+      var w=WORDS[id];
+      rows += '<div class="classified-item">'+
+        '<div class="classified-text">'+
+          '<div class="classified-word-line"><span class="classified-word">'+escapeHtml(w.w)+'</span><span class="classified-reading">'+escapeHtml(w.r)+'</span></div>'+
+          '<div class="classified-meaning">'+escapeHtml(w.m)+'</div>'+
+        '</div>'+
+        '<button class="classified-move '+(isKnown?'to-unknown':'to-known')+'" data-id="'+id+'">'+(isKnown?'✕ 모르겠어요':'✓ 알아요')+'</button>'+
+      '</div>';
+    });
+    fcClassifiedEl.innerHTML='<div class="classified-summary"><strong>'+activeLevel+' '+title+'</strong><span>'+fcDeck.length+'개 단어</span></div><div class="classified-grid">'+rows+'</div>';
+    Array.from(fcClassifiedEl.querySelectorAll('.classified-move')).forEach(function(button){
+      button.addEventListener('click', function(){
+        var id=Number(button.getAttribute('data-id'));
+        getP(id).cardStatus=isKnown?'unknown':'known';
+        scheduleSave();
+        refreshSideStats();
+        buildDeck();
+      });
+    });
+  }
+
   cardEl.addEventListener('click', function(){
     if(fcDeck.length===0) return;
     fcFlipped=!fcFlipped;
@@ -779,6 +843,7 @@ import {
   });
 
   function advance(known){
+    if(!fcDeck.length || isClassifiedMode()) return;
     var id=fcDeck[fcIndex];
     var p=getP(id);
     p.seen++;
@@ -799,6 +864,7 @@ import {
   fcYesBtn.addEventListener('click', function(){ advance(true); });
   document.addEventListener('keydown', function(e){
     if(!document.getElementById('view-cards').classList.contains('active')) return;
+    if(isClassifiedMode()) return;
     if(e.code==='Space'){ e.preventDefault(); cardEl.click(); }
     if(e.key==='ArrowRight'){ advance(true); }
     if(e.key==='ArrowLeft'){ advance(false); }
