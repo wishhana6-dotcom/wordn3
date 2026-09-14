@@ -742,6 +742,17 @@ import {
 
   var faceFrontEl=document.querySelector('#fc-card .face.front');
   var faceBackEl=document.querySelector('#fc-card .face.back');
+  function updateFlashStudyProgress(){
+    var learned=0, total=0;
+    for(var i=0;i<WORDS.length;i++){
+      if(WORDS[i].level!==activeLevel) continue;
+      total++;
+      var p=pOf(i);
+      if(p && (p.cardStatus==='known' || p.cardStatus==='unknown')) learned++;
+    }
+    fcPos.textContent=learned+' / '+total;
+    fcBar.style.width=(total ? (learned/total*100) : 0)+'%';
+  }
   function showCard(){
     if(isClassifiedMode()){
       renderClassifiedList();
@@ -756,7 +767,7 @@ import {
     if(fcDeck.length===0){
       fcScene.style.display='none';
       fcNoBtn.disabled=true; fcYesBtn.disabled=true;
-      fcPos.textContent='0 / 0'; fcBar.style.width='0%';
+      updateFlashStudyProgress();
       var wrap=document.querySelector('.fc-wrap');
       if(!document.getElementById('fc-empty-msg')){
         var d=document.createElement('div');
@@ -786,8 +797,7 @@ import {
       exampleEl.style.display='none';
     }
     starBtn.classList.toggle('on', !!(getP(id).star));
-    fcPos.textContent=(fcIndex+1)+' / '+fcDeck.length;
-    fcBar.style.width=((fcIndex)/fcDeck.length*100)+'%';
+    updateFlashStudyProgress();
   }
 
   function renderClassifiedList(){
