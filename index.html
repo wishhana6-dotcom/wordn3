@@ -430,7 +430,7 @@ import {
   var authBusy = false;
 
   function hasKanji(s){ return /[\u4E00-\u9FFF]/.test(s); }
-  function defaultP(){ return {box:0, seen:0, correct:0, wrong:0, star:false}; }
+  function defaultP(){ return {box:0, seen:0, correct:0, wrong:0, star:false, cardStatus:null}; }
   function getP(id){ if(!progress[id]) progress[id]=defaultP(); return progress[id]; }
 
   var saveTimer=null;
@@ -560,17 +560,19 @@ import {
 
   var FILTERS=[
     {key:'all', label:'전체'},
-    {key:'kanji', label:'한자 포함'},
-    {key:'kana', label:'가나만'},
+    {key:'unknown', label:'✕ 모르겠어요'},
+    {key:'known', label:'✓ 알아요'},
     {key:'star', label:'★ 즐겨찾기'},
-    {key:'weak', label:'약한 단어'}
+    {key:'kanji', label:'한자 포함'},
+    {key:'kana', label:'가나만'}
   ];
   function matchesFilter(w, id, key){
     if(key==='all') return true;
+    if(key==='unknown') return !!(progress[id] && progress[id].cardStatus==='unknown');
+    if(key==='known') return !!(progress[id] && progress[id].cardStatus==='known');
     if(key==='kanji') return hasKanji(w.w);
     if(key==='kana') return !hasKanji(w.w);
     if(key==='star') return !!(progress[id] && progress[id].star);
-    if(key==='weak') return !progress[id] || progress[id].box<2;
     return true;
   }
 
@@ -681,12 +683,17 @@ import {
     var id=fcDeck[fcIndex];
     var p=getP(id);
     p.seen++;
-    if(known){ p.correct++; p.box=Math.min(5,p.box+1); }
-    else{ p.wrong++; p.box=Math.max(0,p.box-1); }
+    if(known){ p.correct++; p.box=Math.min(5,p.box+1); p.cardStatus='known'; }
+    else{ p.wrong++; p.box=Math.max(0,p.box-1); p.cardStatus='unknown'; }
     scheduleSave();
     refreshSideStats();
-    fcIndex++;
-    if(fcIndex>=fcDeck.length){ fcIndex=0; }
+    if(!matchesFilter(WORDS[id], id, fcFilter)){
+      fcDeck.splice(fcIndex,1);
+      if(fcIndex>=fcDeck.length) fcIndex=0;
+    }else{
+      fcIndex++;
+      if(fcIndex>=fcDeck.length) fcIndex=0;
+    }
     showCard();
   }
   fcNoBtn.addEventListener('click', function(){ advance(false); });
