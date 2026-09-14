@@ -252,6 +252,26 @@
   .quiz-opt.correct{background:var(--basil-pale); border-color:var(--basil); color:var(--basil-deep);}
   .quiz-opt.wrong{background:var(--tomato-pale); border-color:var(--tomato); color:var(--tomato);}
   .quiz-opt:disabled{cursor:default;}
+  .quiz-feedback{display:none; max-width:460px; margin-top:12px; padding:14px 16px; border-radius:var(--radius-m); font-size:14px; line-height:1.55; font-weight:600;}
+  .quiz-feedback.show{display:block;}
+  .quiz-feedback.correct{background:var(--basil-pale); color:var(--basil-deep); border:1px solid var(--basil);}
+  .quiz-feedback.wrong{background:var(--tomato-pale); color:var(--tomato); border:1px solid var(--tomato);}
+  .quiz-feedback .answer{display:block; margin-top:3px; font-weight:800;}
+  .quiz-next{width:100%; margin-top:10px; padding:10px; border:0; border-radius:var(--radius-s); background:var(--basil-deep); color:#fff; font-size:13px; font-weight:700; cursor:pointer;}
+  .wrong-note-btn{width:100%; margin-top:10px; padding:12px; border-radius:var(--radius-m); border:1px solid var(--tomato); background:var(--paper); color:var(--tomato); font-size:14px; font-weight:700; cursor:pointer;}
+  .wrong-note-btn:hover{background:var(--tomato-pale);}
+  .wrong-note{max-width:620px;}
+  .wrong-note-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;}
+  .wrong-note-head h2{margin:0; font-size:20px;}
+  .wrong-note-back{padding:8px 12px; border:1px solid var(--line); border-radius:var(--radius-s); background:var(--paper); color:var(--ink-soft); cursor:pointer;}
+  .wrong-note-list{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
+  .wrong-note-row{background:var(--paper); border-radius:var(--radius-m); box-shadow:var(--shadow-card); padding:14px 16px;}
+  .wrong-note-row .top{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;}
+  .wrong-note-row .word{font-family:'Noto Sans JP',sans-serif; font-size:19px; font-weight:700;}
+  .wrong-note-row .reading{font-family:'Noto Sans JP',sans-serif; font-size:12px; color:var(--ink-soft);}
+  .wrong-note-row .meaning{margin-top:4px; color:var(--basil-deep); font-size:13.5px; font-weight:600;}
+  .wrong-note-row .count{margin-left:auto; font-size:11px; color:var(--tomato); font-weight:700;}
+  .wrong-note-empty{padding:42px 20px; text-align:center; background:var(--paper); border-radius:var(--radius-m); color:var(--ink-soft);}
 
   .quiz-result{max-width:460px; text-align:center; padding:34px 22px; background:var(--paper); border-radius:var(--radius-m); box-shadow:var(--shadow-card);}
   .quiz-result .score{font-family:'Noto Sans KR',sans-serif; font-size:44px; font-weight:800; color:var(--basil-deep);}
@@ -307,6 +327,7 @@
       <div class="nav-item" data-view="cards"><span class="ic">枚</span>플래시카드</div>
       <div class="nav-item" data-view="list"><span class="ic">帳</span>단어장</div>
       <div class="nav-item" data-view="quiz"><span class="ic">試</span>퀴즈</div>
+      <div class="nav-item" data-view="wrong"><span class="ic">誤</span>오답노트</div>
       <div class="nav-item" data-view="stats"><span class="ic">表</span>통계</div>
     </nav>
     <div class="side-stats" id="side-stats">
@@ -375,6 +396,15 @@
       <div id="quiz-area"></div>
     </section>
 
+    <!-- Wrong answers -->
+    <section class="view" id="view-wrong">
+      <div class="view-head">
+        <h1>오답노트</h1>
+        <p>퀴즈에서 틀린 단어를 모아서 확인하고 다시 풀어보세요.</p>
+      </div>
+      <div id="wrong-note-area"></div>
+    </section>
+
     <!-- Stats -->
     <section class="view" id="view-stats">
       <div class="view-head">
@@ -390,6 +420,7 @@
   <div class="nav-item" data-view="cards"><span class="ic">枚</span>카드</div>
   <div class="nav-item" data-view="list"><span class="ic">帳</span>단어장</div>
   <div class="nav-item" data-view="quiz"><span class="ic">試</span>퀴즈</div>
+  <div class="nav-item" data-view="wrong"><span class="ic">誤</span>오답</div>
   <div class="nav-item" data-view="stats"><span class="ic">表</span>통계</div>
 </nav>
 
@@ -430,7 +461,7 @@ import {
   var authBusy = false;
 
   function hasKanji(s){ return /[\u4E00-\u9FFF]/.test(s); }
-  function defaultP(){ return {box:0, seen:0, correct:0, wrong:0, star:false, cardStatus:null}; }
+  function defaultP(){ return {box:0, seen:0, correct:0, wrong:0, star:false, cardStatus:null, quizWrong:0}; }
   function getP(id){ if(!progress[id]) progress[id]=defaultP(); return progress[id]; }
 
   var saveTimer=null;
@@ -536,7 +567,7 @@ import {
   document.getElementById('auth-btn').addEventListener('click', handleAuthClick);
   document.getElementById('auth-btn-mobile').addEventListener('click', handleAuthClick);
 
-  var views=['cards','list','quiz','stats'];
+  var views=['cards','list','quiz','wrong','stats'];
   function setView(v){
     views.forEach(function(x){ document.getElementById('view-'+x).classList.toggle('active', x===v); });
     document.querySelectorAll('.nav-item').forEach(function(el){
@@ -544,6 +575,7 @@ import {
     });
     window.scrollTo(0,0);
     if(v==='list') renderList();
+    if(v==='wrong') renderWrongNote();
     if(v==='stats') renderStats();
     if(v==='cards' && fcDeck.length===0) buildDeck();
   }
@@ -573,6 +605,7 @@ import {
     if(key==='kanji') return hasKanji(w.w);
     if(key==='kana') return !hasKanji(w.w);
     if(key==='star') return !!(progress[id] && progress[id].star);
+    if(key==='weak') return !progress[id] || progress[id].box<2;
     return true;
   }
 
@@ -788,12 +821,14 @@ import {
   var quizState=null;
 
   function renderQuizSetup(){
+    var wrongCount=getQuizWrongIds().length;
     quizArea.innerHTML =
       '<div class="quiz-setup">'+
         '<div class="setup-block"><label>문제 유형</label><div class="chip-row" id="qs-mode"></div></div>'+
         '<div class="setup-block"><label>출제 범위</label><div class="chip-row" id="qs-range"></div></div>'+
         '<div class="setup-block"><label>문제 수</label><div class="chip-row" id="qs-count"></div></div>'+
         '<button class="start-btn" id="qs-start">퀴즈 시작</button>'+
+        '<button class="wrong-note-btn" id="qs-wrong-note">오답노트 ('+wrongCount+')</button>'+
       '</div>';
     var mode='w2m', range='all', count=10;
     var modeOpts=[
@@ -822,6 +857,51 @@ import {
     buildChips(document.getElementById('qs-range'), rangeOpts, range, function(k){range=k;}, function(o){return o.k;}, function(o){return o.l;});
     buildChips(document.getElementById('qs-count'), countOpts, count, function(k){count=k;}, function(o){return o;}, function(o){return o+'문제';});
     document.getElementById('qs-start').addEventListener('click', function(){ startQuiz(mode, range, count); });
+    document.getElementById('qs-wrong-note').addEventListener('click', function(){ setView('wrong'); });
+  }
+
+  function getQuizWrongIds(){
+    var ids=[];
+    for(var i=0;i<WORDS.length;i++){
+      if(progress[i] && Number(progress[i].quizWrong||0)>0) ids.push(i);
+    }
+    ids.sort(function(a,b){ return Number(progress[b].quizWrong||0)-Number(progress[a].quizWrong||0); });
+    return ids;
+  }
+
+  function renderWrongNote(){
+    var ids=getQuizWrongIds();
+    var rows='';
+    ids.forEach(function(id){
+      var w=WORDS[id], count=Number(progress[id].quizWrong||0);
+      rows += '<div class="wrong-note-row">'+
+        '<div class="top"><span class="word">'+escapeHtml(w.w)+'</span><span class="reading">'+escapeHtml(w.r)+'</span><span class="count">틀린 횟수 '+count+'</span></div>'+
+        '<div class="meaning">'+escapeHtml(w.m)+'</div>'+
+      '</div>';
+    });
+    var wrongArea=document.getElementById('wrong-note-area');
+    wrongArea.innerHTML =
+      '<div class="wrong-note">'+
+        '<div class="wrong-note-head"><div><strong>'+ids.length+'개 단어</strong></div><button class="wrong-note-back" id="wn-back">← 퀴즈로</button></div>'+
+        (ids.length
+          ? '<button class="start-btn" id="wn-retry">오답 다시 풀기 ('+ids.length+')</button><div class="wrong-note-list">'+rows+'</div>'
+          : '<div class="wrong-note-empty">아직 퀴즈에서 틀린 단어가 없어요.</div>')+
+      '</div>';
+    document.getElementById('wn-back').addEventListener('click', function(){
+      renderQuizSetup();
+      setView('quiz');
+    });
+    var retry=document.getElementById('wn-retry');
+    if(retry) retry.addEventListener('click', function(){
+      var shuffled=ids.slice();
+      for(var i=shuffled.length-1;i>0;i--){
+        var j=Math.floor(Math.random()*(i+1));
+        var t=shuffled[i]; shuffled[i]=shuffled[j]; shuffled[j]=t;
+      }
+      quizState={mode:'w2m', ids:shuffled, i:0, score:0, wrong:[], answered:false};
+      setView('quiz');
+      renderQuizQuestion();
+    });
   }
 
   function startQuiz(mode, range, count){
@@ -916,9 +996,10 @@ import {
     }
 
     quizArea.innerHTML =
-      '<div class="quiz-head"><span>문제 '+(qs.i+1)+' / '+qs.ids.length+'</span><span>점수 '+qs.score+'</span></div>'+
+      '<div class="quiz-head"><span>문제 '+(qs.i+1)+' / '+qs.ids.length+'</span><span id="quiz-score">점수 '+qs.score+'</span></div>'+
       '<div class="quiz-q">'+qHtml+'</div>'+
-      '<div class="quiz-opts">'+optsHtml+'</div>';
+      '<div class="quiz-opts">'+optsHtml+'</div>'+
+      '<div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>';
 
     Array.from(quizArea.querySelectorAll('.quiz-opt')).forEach(function(btn){
       btn.addEventListener('click', function(){
@@ -929,7 +1010,7 @@ import {
         var p=getP(id);
         p.seen++;
         if(correct){ p.correct++; p.box=Math.min(5,p.box+1); qs.score++; }
-        else{ p.wrong++; p.box=Math.max(0,p.box-1); qs.wrong.push(id); }
+        else{ p.wrong++; p.box=Math.max(0,p.box-1); p.quizWrong=Number(p.quizWrong||0)+1; qs.wrong.push(id); }
         scheduleSave(); refreshSideStats();
 
         Array.from(quizArea.querySelectorAll('.quiz-opt')).forEach(function(b2){
@@ -938,7 +1019,22 @@ import {
           if(bid===id) b2.classList.add('correct');
           else if(b2===btn) b2.classList.add('wrong');
         });
-        setTimeout(function(){ qs.i++; renderQuizQuestion(); }, 700);
+        var answerText;
+        if(qs.mode==='w2m') answerText=w.m;
+        else if(qs.mode==='m2w') answerText=w.w+(hasKanji(w.w)?' ('+w.r+')':'');
+        else if(qs.mode==='k2r') answerText=w.r;
+        else answerText=w.w;
+        var feedback=document.getElementById('quiz-feedback');
+        feedback.className='quiz-feedback show '+(correct?'correct':'wrong');
+        feedback.innerHTML=(correct
+          ? '✓ 정답이에요!'
+          : '✕ 오답이에요.<span class="answer">정답: '+escapeHtml(answerText)+'</span>')+
+          '<button class="quiz-next" id="quiz-next">다음 문제</button>';
+        document.getElementById('quiz-score').textContent='점수 '+qs.score;
+        document.getElementById('quiz-next').addEventListener('click', function(){
+          qs.i++;
+          renderQuizQuestion();
+        });
       });
     });
   }
@@ -1020,6 +1116,7 @@ import {
       buildDeck();
       renderQuizSetup();
       if(document.getElementById('view-list').classList.contains('active')) renderList();
+      if(document.getElementById('view-wrong').classList.contains('active')) renderWrongNote();
       if(document.getElementById('view-stats').classList.contains('active')) renderStats();
     }
   });
