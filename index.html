@@ -222,6 +222,9 @@
   .fc-classified{display:none; width:100%; max-width:760px;}
   .classified-summary{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; color:var(--ink-soft); font-size:12.5px;}
   .classified-summary strong{font-size:15px; color:var(--ink);}
+  .classified-summary-actions{display:flex; align-items:center; gap:9px;}
+  .classified-quiz-btn{padding:8px 11px; border:0; border-radius:var(--radius-s); background:var(--basil); color:#F5F9EE; font-size:11.5px; font-weight:800; cursor:pointer;}
+  .classified-quiz-btn:hover{background:var(--basil-deep);}
   .classified-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px;}
   .classified-item{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; min-height:64px; padding:10px 11px 10px 14px; background:var(--paper); border-radius:var(--radius-m); box-shadow:var(--shadow-card);}
   .classified-word-line{display:flex; align-items:baseline; gap:8px; min-width:0;}
@@ -231,7 +234,8 @@
   .classified-move{padding:7px 9px; border-radius:var(--radius-s); border:1px solid var(--line); background:var(--bg); color:var(--ink-soft); font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap;}
   .classified-move.to-known{border-color:var(--basil); color:var(--basil-deep); background:var(--basil-pale);}
   .classified-move.to-unknown{border-color:var(--tomato); color:var(--tomato); background:var(--tomato-pale);}
-  @media (max-width:680px){.classified-grid{grid-template-columns:1fr;}.classified-item{min-height:58px;}.classified-move{padding:7px 8px;}}
+  .classified-move.to-verified{border-color:var(--basil); color:var(--basil-deep); background:var(--lemon-pale);}
+  @media (max-width:680px){.classified-summary{align-items:flex-start;}.classified-summary-actions{flex-direction:column-reverse;align-items:flex-end;gap:5px;}.classified-grid{grid-template-columns:1fr;}.classified-item{min-height:58px;}.classified-move{padding:7px 8px;}}
 
   /* ---------- Word list ---------- */
   .search-row{display:flex; gap:8px; margin-bottom:6px;}
@@ -672,6 +676,7 @@ import {
     {key:'all', label:'전체'},
     {key:'unknown', label:'✕ 모르겠어요'},
     {key:'known', label:'✓ 알아요'},
+    {key:'verified', label:'✓✓ 찐알아요'},
     {key:'star', label:'★ 즐겨찾기'},
     {key:'kanji', label:'한자 포함'},
     {key:'kana', label:'가나만'}
@@ -682,6 +687,7 @@ import {
     if(key==='all') return true;
     if(key==='unknown') return !!(p && p.cardStatus==='unknown');
     if(key==='known') return !!(p && p.cardStatus==='known');
+    if(key==='verified') return !!(p && p.cardStatus==='verified');
     if(key==='kanji') return hasKanji(w.w);
     if(key==='kana') return !hasKanji(w.w);
     if(key==='star') return !!(p && p.star);
@@ -697,15 +703,21 @@ import {
   FILTERS.forEach(function(f){
     var chip=document.createElement('div');
     chip.className='chip'+(f.key==='all'?' active':'');
+    chip.setAttribute('data-fc-filter', f.key);
     chip.textContent=f.label;
     chip.addEventListener('click', function(){
-      fcFilter=f.key;
-      Array.from(fcFiltersEl.children).forEach(function(c){c.classList.remove('active');});
-      chip.classList.add('active');
-      buildDeck();
+      selectFcFilter(f.key);
     });
     fcFiltersEl.appendChild(chip);
   });
+
+  function selectFcFilter(key){
+    fcFilter=key;
+    Array.from(fcFiltersEl.children).forEach(function(c){
+      c.classList.toggle('active', c.getAttribute('data-fc-filter')===key);
+    });
+    buildDeck();
+  }
 
   function buildDeck(){
     fcDeck=[];
@@ -720,7 +732,7 @@ import {
     showCard();
   }
 
-  function isClassifiedMode(){ return fcFilter==='known' || fcFilter==='unknown'; }
+  function isClassifiedMode(){ return fcFilter==='known' || fcFilter==='unknown' || fcFilter==='verified'; }
 
   var cardEl=document.getElementById('fc-card');
   var wordEl=document.getElementById('fc-word');
@@ -748,7 +760,7 @@ import {
       if(WORDS[i].level!==activeLevel) continue;
       total++;
       var p=pOf(i);
-      if(p && (p.cardStatus==='known' || p.cardStatus==='unknown')) learned++;
+      if(p && (p.cardStatus==='known' || p.cardStatus==='unknown' || p.cardStatus==='verified')) learned++;
     }
     fcPos.textContent=learned+' / '+total;
     fcBar.style.width=(total ? (learned/total*100) : 0)+'%';
@@ -808,7 +820,8 @@ import {
     fcControlsEl.style.display='none';
     fcClassifiedEl.style.display='block';
     var isKnown=fcFilter==='known';
-    var title=isKnown?'✓ 알아요':'✕ 모르겠어요';
+    var isVerified=fcFilter==='verified';
+    var title=isVerified?'✓✓ 찐알아요':(isKnown?'✓ 알아요':'✕ 모르겠어요');
     if(!fcDeck.length){
       fcClassifiedEl.innerHTML='<div class="fc-empty"><span class="big">'+title+' 목록이 비어 있어요</span>플래시카드에서 버튼을 누르면 여기에 모입니다.</div>';
       return;
@@ -816,19 +829,24 @@ import {
     var rows='';
     fcDeck.forEach(function(id){
       var w=WORDS[id];
+      var moveClass=isVerified?'to-verified':(isKnown?'to-unknown':'to-known');
+      var moveLabel=isVerified?'✓ 알아요로':(isKnown?'✕ 모르겠어요':'✓ 알아요');
       rows += '<div class="classified-item">'+
         '<div class="classified-text">'+
           '<div class="classified-word-line"><span class="classified-word">'+escapeHtml(w.w)+'</span><span class="classified-reading">'+escapeHtml(w.r)+'</span></div>'+
           '<div class="classified-meaning">'+escapeHtml(w.m)+'</div>'+
         '</div>'+
-        '<button class="classified-move '+(isKnown?'to-unknown':'to-known')+'" data-id="'+id+'">'+(isKnown?'✕ 모르겠어요':'✓ 알아요')+'</button>'+
+        '<button class="classified-move '+moveClass+'" data-id="'+id+'">'+moveLabel+'</button>'+
       '</div>';
     });
-    fcClassifiedEl.innerHTML='<div class="classified-summary"><strong>'+activeLevel+' '+title+'</strong><span>'+fcDeck.length+'개 단어</span></div><div class="classified-grid">'+rows+'</div>';
+    var quizButton=isKnown?'<button class="classified-quiz-btn" id="known-quiz-btn">찐알아요 퀴즈</button>':'';
+    fcClassifiedEl.innerHTML='<div class="classified-summary"><strong>'+activeLevel+' '+title+'</strong><div class="classified-summary-actions">'+quizButton+'<span>'+fcDeck.length+'개 단어</span></div></div><div class="classified-grid">'+rows+'</div>';
+    var knownQuizBtn=document.getElementById('known-quiz-btn');
+    if(knownQuizBtn) knownQuizBtn.addEventListener('click', startMasteryQuiz);
     Array.from(fcClassifiedEl.querySelectorAll('.classified-move')).forEach(function(button){
       button.addEventListener('click', function(){
         var id=Number(button.getAttribute('data-id'));
-        getP(id).cardStatus=isKnown?'unknown':'known';
+        getP(id).cardStatus=(isKnown?'unknown':'known');
         scheduleSave();
         refreshSideStats();
         buildDeck();
@@ -962,6 +980,26 @@ import {
   // ================= Quiz =================
   var quizArea=document.getElementById('quiz-area');
   var quizState=null;
+
+  function startMasteryQuiz(){
+    var ids=[];
+    for(var i=0;i<WORDS.length;i++){
+      if(WORDS[i].level!==activeLevel) continue;
+      var p=pOf(i);
+      if(p && p.cardStatus==='known') ids.push(i);
+    }
+    if(!ids.length){
+      alert('알아요 목록에 퀴즈를 풀 단어가 없어요.');
+      return;
+    }
+    for(var i2=ids.length-1;i2>0;i2--){
+      var j=Math.floor(Math.random()*(i2+1));
+      var t=ids[i2]; ids[i2]=ids[j]; ids[j]=t;
+    }
+    quizState={mode:'w2m', ids:ids.slice(0,20), i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0};
+    setView('quiz');
+    renderQuizQuestion();
+  }
 
   function renderQuizSetup(){
     var wrongCount=getQuizWrongIds().length;
@@ -1143,7 +1181,7 @@ import {
     }
 
     quizArea.innerHTML =
-      '<div class="quiz-head"><span>문제 '+(qs.i+1)+' / '+qs.ids.length+'</span><span id="quiz-score">점수 '+qs.score+'</span></div>'+
+      '<div class="quiz-head"><span>'+(qs.mastery?'찐알아요 검증 · ':'')+'문제 '+(qs.i+1)+' / '+qs.ids.length+'</span><span id="quiz-score">점수 '+qs.score+'</span></div>'+
       '<div class="quiz-q">'+qHtml+'</div>'+
       '<div class="quiz-opts">'+optsHtml+'</div>'+
       '<div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>';
@@ -1156,7 +1194,10 @@ import {
         var correct = picked===id;
         var p=getP(id);
         p.seen++;
-        if(correct){ p.correct++; p.box=Math.min(5,p.box+1); qs.score++; }
+        if(correct){
+          p.correct++; p.box=Math.min(5,p.box+1); qs.score++;
+          if(qs.mastery){ p.cardStatus='verified'; qs.promoted++; }
+        }
         else{ p.wrong++; p.box=Math.max(0,p.box-1); p.quizWrong=Number(p.quizWrong||0)+1; qs.wrong.push(id); }
         scheduleSave(); refreshSideStats();
 
@@ -1174,7 +1215,7 @@ import {
         var feedback=document.getElementById('quiz-feedback');
         feedback.className='quiz-feedback show '+(correct?'correct':'wrong');
         feedback.innerHTML=(correct
-          ? '✓ 정답이에요!'
+          ? (qs.mastery?'✓ 정답이에요! 찐알아요로 이동했어요.':'✓ 정답이에요!')
           : '✕ 오답이에요.<span class="answer">정답: '+escapeHtml(answerText)+'</span>')+
           '<button class="quiz-next" id="quiz-next">다음 문제</button>';
         document.getElementById('quiz-score').textContent='점수 '+qs.score;
@@ -1188,6 +1229,32 @@ import {
 
   function renderQuizResult(){
     var qs=quizState;
+    if(qs.mastery){
+      quizArea.innerHTML =
+        '<div class="quiz-result">'+
+          '<div class="score">'+qs.score+'<small> / '+qs.ids.length+'</small></div>'+
+          '<div style="margin-top:8px;color:var(--ink-soft);font-size:13px;">찐알아요 '+qs.promoted+'개 추가 · 정답률 '+Math.round(qs.score/qs.ids.length*100)+'%</div>'+
+          '<div class="actions">'+
+            '<button id="qr-known">알아요 목록</button>'+
+            (qs.wrong.length ? '<button id="qr-wrong" class="primary">틀린 단어 재도전</button>' : '<button id="qr-verified" class="primary">찐알아요 보기</button>')+
+          '</div>'+
+        '</div>';
+      document.getElementById('qr-known').addEventListener('click', function(){
+        setView('cards');
+        selectFcFilter('known');
+      });
+      var masteryWrong=document.getElementById('qr-wrong');
+      if(masteryWrong) masteryWrong.addEventListener('click', function(){
+        quizState={mode:'w2m', ids:qs.wrong.slice(), i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0};
+        renderQuizQuestion();
+      });
+      var verifiedBtn=document.getElementById('qr-verified');
+      if(verifiedBtn) verifiedBtn.addEventListener('click', function(){
+        setView('cards');
+        selectFcFilter('verified');
+      });
+      return;
+    }
     quizArea.innerHTML =
       '<div class="quiz-result">'+
         '<div class="score">'+qs.score+'<small> / '+qs.ids.length+'</small></div>'+
