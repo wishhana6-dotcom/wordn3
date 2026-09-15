@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>JLPT 어휘노트</title>
+<title>JLPT 단어장</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -76,7 +76,6 @@
   }
   .brand-text{line-height:1.15;}
   .brand-text .t1{font-family:'Noto Sans KR',sans-serif; font-size:18px; font-weight:800; letter-spacing:-0.01em;}
-  .brand-text .t2{font-size:11px; color:var(--ink-soft); letter-spacing:0.02em;}
 
   .auth-box{
     padding:11px 12px; border:1px solid var(--line); border-radius:var(--radius-m);
@@ -334,7 +333,7 @@
 
 <div class="top-header">
   <div class="stamp">語</div>
-  <div class="brand-text"><div class="t1">JLPT 어휘노트</div></div>
+  <div class="brand-text"><div class="t1">JLPT 단어장</div></div>
   <button class="auth-btn" id="auth-btn-mobile">Google 로그인</button>
 </div>
 
@@ -343,8 +342,7 @@
     <div class="brand">
       <div class="stamp">語</div>
       <div class="brand-text">
-        <div class="t1">JLPT 어휘노트</div>
-        <div class="t2">JLPT 단어장</div>
+        <div class="t1">JLPT 단어장</div>
       </div>
     </div>
     <div class="auth-box">
@@ -1307,10 +1305,8 @@ import {
             if(parseInt(b2.getAttribute('data-id'),10)===id) b2.classList.add('correct');
           });
           var feedback=document.getElementById('quiz-feedback');
-          feedback.className='quiz-feedback show correct';
-          feedback.textContent=qs.mastery
-            ? (qs.currentHadWrong?'✓ 정답이에요! 이 단어는 알아요에 남겨둘게요.':'✓ 정답이에요! 찐알아요로 이동했어요.')
-            : '✓ 정답이에요!';
+          feedback.className='quiz-feedback';
+          feedback.textContent='';
           document.getElementById('quiz-score').textContent='점수 '+qs.score;
           scheduleSave(); refreshSideStats();
           if(qs.mastery){
@@ -1322,7 +1318,7 @@ import {
             if(quizState!==qs) return;
             if(!qs.mastery) qs.i++;
             renderQuizQuestion();
-          },650);
+          },180);
           return;
         }
         qs.answered=true;
