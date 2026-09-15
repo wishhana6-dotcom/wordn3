@@ -279,6 +279,8 @@
   .quiz-opt.correct{background:var(--basil-pale); border-color:var(--basil); color:var(--basil-deep);}
   .quiz-opt.wrong{background:var(--tomato-pale); border-color:var(--tomato); color:var(--tomato);}
   .quiz-opt:disabled{cursor:default;}
+  @keyframes quizShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+  .quiz-opts.shake{animation:quizShake .3s ease;}
   .quiz-feedback{display:none; max-width:460px; margin-top:12px; padding:14px 16px; border-radius:var(--radius-m); font-size:14px; line-height:1.55; font-weight:600;}
   .quiz-feedback.show{display:block;}
   .quiz-feedback.correct{background:var(--basil-pale); color:var(--basil-deep); border:1px solid var(--basil);}
@@ -1153,6 +1155,7 @@ import {
       var t=opts[k]; opts[k]=opts[j]; opts[j]=t;
     }
     qs.answered=false;
+    qs.currentHadWrong=false;
 
     var qHtml, optsHtml='';
     if(qs.mode==='w2m'){
@@ -1189,40 +1192,49 @@ import {
     Array.from(quizArea.querySelectorAll('.quiz-opt')).forEach(function(btn){
       btn.addEventListener('click', function(){
         if(qs.answered) return;
-        qs.answered=true;
         var picked=parseInt(btn.getAttribute('data-id'),10);
         var correct = picked===id;
         var p=getP(id);
         p.seen++;
         if(correct){
-          p.correct++; p.box=Math.min(5,p.box+1); qs.score++;
-          if(qs.mastery){ p.cardStatus='verified'; qs.promoted++; }
+          qs.answered=true;
+          p.correct++; p.box=Math.min(5,p.box+1);
+          if(!qs.currentHadWrong) qs.score++;
+          if(qs.mastery && !qs.currentHadWrong){ p.cardStatus='verified'; qs.promoted++; }
+          Array.from(quizArea.querySelectorAll('.quiz-opt')).forEach(function(b2){
+            b2.disabled=true;
+            if(parseInt(b2.getAttribute('data-id'),10)===id) b2.classList.add('correct');
+          });
+          var feedback=document.getElementById('quiz-feedback');
+          feedback.className='quiz-feedback show correct';
+          feedback.textContent=qs.mastery
+            ? (qs.currentHadWrong?'✓ 정답이에요! 이 단어는 알아요에 남겨둘게요.':'✓ 정답이에요! 찐알아요로 이동했어요.')
+            : '✓ 정답이에요!';
+          document.getElementById('quiz-score').textContent='점수 '+qs.score;
+          scheduleSave(); refreshSideStats();
+          setTimeout(function(){
+            if(quizState!==qs) return;
+            qs.i++;
+            renderQuizQuestion();
+          },650);
+          return;
         }
-        else{ p.wrong++; p.box=Math.max(0,p.box-1); p.quizWrong=Number(p.quizWrong||0)+1; qs.wrong.push(id); }
+        qs.answered=true;
+        qs.currentHadWrong=true;
+        p.wrong++; p.box=Math.max(0,p.box-1); p.quizWrong=Number(p.quizWrong||0)+1;
+        if(qs.wrong.indexOf(id)===-1) qs.wrong.push(id);
         scheduleSave(); refreshSideStats();
-
-        Array.from(quizArea.querySelectorAll('.quiz-opt')).forEach(function(b2){
-          b2.disabled=true;
-          var bid=parseInt(b2.getAttribute('data-id'),10);
-          if(bid===id) b2.classList.add('correct');
-          else if(b2===btn) b2.classList.add('wrong');
-        });
-        var answerText;
-        if(qs.mode==='w2m') answerText=w.m;
-        else if(qs.mode==='m2w') answerText=w.w+(hasKanji(w.w)?' ('+w.r+')':'');
-        else if(qs.mode==='k2r') answerText=w.r;
-        else answerText=w.w;
-        var feedback=document.getElementById('quiz-feedback');
-        feedback.className='quiz-feedback show '+(correct?'correct':'wrong');
-        feedback.innerHTML=(correct
-          ? (qs.mastery?'✓ 정답이에요! 찐알아요로 이동했어요.':'✓ 정답이에요!')
-          : '✕ 오답이에요.<span class="answer">정답: '+escapeHtml(answerText)+'</span>')+
-          '<button class="quiz-next" id="quiz-next">다음 문제</button>';
-        document.getElementById('quiz-score').textContent='점수 '+qs.score;
-        document.getElementById('quiz-next').addEventListener('click', function(){
-          qs.i++;
-          renderQuizQuestion();
-        });
+        btn.classList.add('wrong');
+        btn.disabled=true;
+        var optionsEl=quizArea.querySelector('.quiz-opts');
+        optionsEl.classList.remove('shake');
+        void optionsEl.offsetWidth;
+        optionsEl.classList.add('shake');
+        if(navigator.vibrate) navigator.vibrate([80,40,80]);
+        setTimeout(function(){
+          optionsEl.classList.remove('shake');
+          qs.answered=false;
+        },320);
       });
     });
   }
