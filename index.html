@@ -494,11 +494,14 @@ import {
   var LEGACY_KEY_MAP = JSON.parse(document.getElementById('legacy-key-map').textContent);
   var activeLevel = 'N3';
   var STORE_KEY = 'n3-progress-v2';
+  var LOCAL_UPDATED_KEY = STORE_KEY+'-updated-at';
   var progress = {};
   var storageReady = false;
   var currentUser = null;
   var appStarted = false;
   var authBusy = false;
+  var progressRevision = 0;
+  var levelSummaryCache = {};
 
   function hasKanji(s){ return /[\u4E00-\u9FFF]/.test(s); }
   function wordKey(id){ var w=WORDS[id]; return w.level+'|'+w.w+'|'+w.r; }
@@ -521,19 +524,38 @@ import {
   }
 
   var saveTimer=null;
+  var localSaveTimer=null;
   var saveInFlight=false;
   var savePending=false;
+  var localDirty=false;
   function saveLocalNow(){
     var value=JSON.stringify(progress);
-    try{ localStorage.setItem(STORE_KEY, value); }
+    var updatedAt=Date.now();
+    try{
+      localStorage.setItem(STORE_KEY, value);
+      localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+      localDirty=false;
+    }
     catch(e){ console.warn('localStorage save failed', e); }
-    return value;
+    return {value:value, updatedAt:updatedAt};
   }
   function scheduleSave(){
-    saveLocalNow();
+    progressRevision++;
+    localDirty=true;
+    if(localSaveTimer) clearTimeout(localSaveTimer);
+    localSaveTimer=setTimeout(function(){ localSaveTimer=null; saveLocalNow(); },250);
     if(saveTimer) clearTimeout(saveTimer);
-    saveTimer=setTimeout(saveNow, 1500);
+    saveTimer=setTimeout(saveNow, 2000);
   }
+  function flushLocalProgress(){
+    if(!localDirty) return;
+    if(localSaveTimer){ clearTimeout(localSaveTimer); localSaveTimer=null; }
+    saveLocalNow();
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='hidden') flushLocalProgress();
+  });
+  window.addEventListener('pagehide', flushLocalProgress);
   function setSyncStatus(message){
     var el=document.getElementById('sync-status');
     if(el) el.textContent=message;
@@ -543,18 +565,19 @@ import {
   }
   async function saveNow(){
     saveTimer=null;
-    var value=saveLocalNow();
+    if(localSaveTimer){ clearTimeout(localSaveTimer); localSaveTimer=null; }
+    var snapshotValue=saveLocalNow();
     if(saveInFlight){ savePending=true; return; }
     saveInFlight=true;
     try{
-      if(window.storage && window.storage.set){ await window.storage.set(STORE_KEY, value, false); }
+      if(window.storage && window.storage.set){ await window.storage.set(STORE_KEY, snapshotValue.value, false); }
     }catch(e){ console.warn('legacy storage save failed', e); }
     if(!currentUser){
       setSyncStatus('이 기기에 저장됨');
     }else{
       try{
         setSyncStatus('동기화 중…');
-        await setDoc(userProgressRef(), {progress:JSON.parse(value), updatedAt:serverTimestamp()}, {merge:true});
+        await setDoc(userProgressRef(), {progress:JSON.parse(snapshotValue.value), clientUpdatedAt:snapshotValue.updatedAt, updatedAt:serverTimestamp()}, {merge:true});
         setSyncStatus('Firebase 동기화 완료');
       }catch(e){
         console.error('cloud save failed', e);
@@ -585,8 +608,15 @@ import {
     return {};
   }
   async function loadProgress(){
+    var localExists=false;
+    try{ localExists=localStorage.getItem(STORE_KEY)!==null; }
+    catch(e){ console.warn('localStorage status read failed', e); }
     var localMigration=migrateProgress(await loadLocalProgress());
     var localProgress=localMigration.data;
+    if(Object.keys(localProgress).length) localExists=true;
+    var localUpdatedAt=0;
+    try{ localUpdatedAt=Number(localStorage.getItem(LOCAL_UPDATED_KEY)||0); }
+    catch(e){ console.warn('local progress timestamp read failed', e); }
     progress=localProgress;
     var shouldSaveMigration=localMigration.changed;
     if(currentUser){
@@ -594,12 +624,23 @@ import {
         setSyncStatus('Firebase에서 기록 불러오는 중…');
         var snapshot=await getDoc(userProgressRef());
         if(snapshot.exists() && snapshot.data().progress){
-          var cloudMigration=migrateProgress(snapshot.data().progress);
-          progress=cloudMigration.data;
-          shouldSaveMigration=cloudMigration.changed;
-          localStorage.setItem(STORE_KEY, JSON.stringify(progress));
+          var cloudData=snapshot.data();
+          var cloudUpdatedAt=Number(cloudData.clientUpdatedAt||0);
+          if(!cloudUpdatedAt && cloudData.updatedAt && cloudData.updatedAt.toMillis) cloudUpdatedAt=cloudData.updatedAt.toMillis();
+          if(localExists && localUpdatedAt>cloudUpdatedAt){
+            progress=localProgress;
+            shouldSaveMigration=true;
+          }else{
+            var cloudMigration=migrateProgress(cloudData.progress);
+            progress=cloudMigration.data;
+            shouldSaveMigration=cloudMigration.changed;
+            var acceptedAt=cloudUpdatedAt||Date.now();
+            localStorage.setItem(STORE_KEY, JSON.stringify(progress));
+            localStorage.setItem(LOCAL_UPDATED_KEY, String(acceptedAt));
+          }
         }else if(Object.keys(localProgress).length){
-          await setDoc(userProgressRef(), {progress:localProgress, updatedAt:serverTimestamp()}, {merge:true});
+          var firstCloudAt=localUpdatedAt||Date.now();
+          await setDoc(userProgressRef(), {progress:localProgress, clientUpdatedAt:firstCloudAt, updatedAt:serverTimestamp()}, {merge:true});
         }
         setSyncStatus('Firebase 동기화 완료');
       }catch(e){
@@ -610,6 +651,7 @@ import {
       setSyncStatus('이 기기에 저장됩니다');
     }
     storageReady = true;
+    progressRevision++;
     refreshSideStats();
     if(shouldSaveMigration) scheduleSave();
   }
@@ -682,16 +724,27 @@ import {
     btn.addEventListener('click', function(){ setLevel(btn.getAttribute('data-level')); });
   });
 
-  function refreshSideStats(){
-    var learned=0, mastered=0;
+  function getLevelSummary(level){
+    var cached=levelSummaryCache[level];
+    if(cached && cached.revision===progressRevision) return cached;
+    var learned=0, mastered=0, classified=0, total=0;
     for(var i=0;i<WORDS.length;i++){
-      if(WORDS[i].level!==activeLevel) continue;
+      if(WORDS[i].level!==level) continue;
+      total++;
       var p=pOf(i);
       if(p && p.seen>0) learned++;
       if(p && p.box>=5) mastered++;
+      if(p && (p.cardStatus==='known' || p.cardStatus==='unknown' || p.cardStatus==='verified')) classified++;
     }
-    document.getElementById('ss-learned').textContent=learned;
-    document.getElementById('ss-mastered').textContent=mastered;
+    cached={revision:progressRevision, learned:learned, mastered:mastered, classified:classified, total:total};
+    levelSummaryCache[level]=cached;
+    return cached;
+  }
+
+  function refreshSideStats(){
+    var summary=getLevelSummary(activeLevel);
+    document.getElementById('ss-learned').textContent=summary.learned;
+    document.getElementById('ss-mastered').textContent=summary.mastered;
   }
 
   var FILTERS=[
@@ -783,15 +836,9 @@ import {
   var faceFrontEl=document.querySelector('#fc-card .face.front');
   var faceBackEl=document.querySelector('#fc-card .face.back');
   function updateFlashStudyProgress(){
-    var learned=0, total=0;
-    for(var i=0;i<WORDS.length;i++){
-      if(WORDS[i].level!==activeLevel) continue;
-      total++;
-      var p=pOf(i);
-      if(p && (p.cardStatus==='known' || p.cardStatus==='unknown' || p.cardStatus==='verified')) learned++;
-    }
-    fcPos.textContent=learned+' / '+total;
-    fcBar.style.width=(total ? (learned/total*100) : 0)+'%';
+    var summary=getLevelSummary(activeLevel);
+    fcPos.textContent=summary.classified+' / '+summary.total;
+    fcBar.style.width=(summary.total ? (summary.classified/summary.total*100) : 0)+'%';
   }
   function showCard(){
     if(isClassifiedMode()){
@@ -836,7 +883,8 @@ import {
     } else {
       exampleEl.style.display='none';
     }
-    starBtn.classList.toggle('on', !!(getP(id).star));
+    var shownProgress=pOf(id);
+    starBtn.classList.toggle('on', !!(shownProgress && shownProgress.star));
     updateFlashStudyProgress();
   }
 
@@ -1005,26 +1053,39 @@ import {
   // ================= Quiz =================
   var quizArea=document.getElementById('quiz-area');
   var quizState=null;
-  var MASTERY_QUIZ_KEY='n3-mastery-quiz-v1';
+  var LEGACY_MASTERY_QUIZ_KEY='n3-mastery-quiz-v1';
+  var MASTERY_QUEUE_KEY='n3-mastery-quiz-queue-v2';
+  var MASTERY_STATE_KEY='n3-mastery-quiz-state-v2';
 
   function getMasteryResumeInfo(level){
     if(quizState && quizState.mastery && quizState.level===level){
       return {current:quizState.i+1, total:quizState.ids.length};
     }
     try{
-      var saved=JSON.parse(localStorage.getItem(MASTERY_QUIZ_KEY)||'null');
-      if(saved && saved.level===level && Array.isArray(saved.keys) && saved.keys.length){
-        return {current:Number(saved.i||0)+1, total:saved.keys.length};
+      var saved=JSON.parse(localStorage.getItem(MASTERY_STATE_KEY)||'null');
+      if(saved && saved.level===level && Number(saved.total||0)>0){
+        return {current:Number(saved.i||0)+1, total:Number(saved.total)};
+      }
+      var legacy=JSON.parse(localStorage.getItem(LEGACY_MASTERY_QUIZ_KEY)||'null');
+      if(legacy && legacy.level===level && Array.isArray(legacy.keys) && legacy.keys.length){
+        return {current:Number(legacy.i||0)+1, total:legacy.keys.length};
       }
     }catch(e){ console.warn('mastery quiz state read failed', e); }
     return null;
+  }
+
+  function saveMasteryQuizQueue(qs){
+    if(!qs || !qs.mastery) return;
+    var queue={level:qs.level, keys:qs.ids.map(function(id){ return wordKey(id); })};
+    try{ localStorage.setItem(MASTERY_QUEUE_KEY, JSON.stringify(queue)); }
+    catch(e){ console.warn('mastery quiz queue save failed', e); }
   }
 
   function saveMasteryQuizState(qs){
     if(!qs || !qs.mastery) return;
     var data={
       level:qs.level,
-      keys:qs.ids.map(function(id){ return wordKey(id); }),
+      total:qs.ids.length,
       i:qs.i,
       score:qs.score,
       wrongKeys:qs.wrong.map(function(id){ return wordKey(id); }),
@@ -1032,18 +1093,33 @@ import {
       currentHadWrong:!!qs.currentHadWrong,
       activeQuestionKey:qs.activeQuestionId===null || qs.activeQuestionId===undefined ? null : wordKey(qs.activeQuestionId)
     };
-    try{ localStorage.setItem(MASTERY_QUIZ_KEY, JSON.stringify(data)); }
+    try{ localStorage.setItem(MASTERY_STATE_KEY, JSON.stringify(data)); }
     catch(e){ console.warn('mastery quiz state save failed', e); }
   }
 
   function loadMasteryQuizState(level){
     try{
-      var saved=JSON.parse(localStorage.getItem(MASTERY_QUIZ_KEY)||'null');
-      if(!saved || saved.level!==level || !Array.isArray(saved.keys) || !saved.keys.length) return null;
+      var saved=JSON.parse(localStorage.getItem(MASTERY_STATE_KEY)||'null');
+      var queue=JSON.parse(localStorage.getItem(MASTERY_QUEUE_KEY)||'null');
+      if(!saved || !queue){
+        var legacy=JSON.parse(localStorage.getItem(LEGACY_MASTERY_QUIZ_KEY)||'null');
+        if(legacy && legacy.level===level && Array.isArray(legacy.keys)){
+          saved={
+            level:legacy.level, total:legacy.keys.length, i:legacy.i, score:legacy.score,
+            wrongKeys:legacy.wrongKeys, promoted:legacy.promoted,
+            currentHadWrong:legacy.currentHadWrong, activeQuestionKey:legacy.activeQuestionKey
+          };
+          queue={level:legacy.level, keys:legacy.keys};
+          localStorage.setItem(MASTERY_STATE_KEY, JSON.stringify(saved));
+          localStorage.setItem(MASTERY_QUEUE_KEY, JSON.stringify(queue));
+          localStorage.removeItem(LEGACY_MASTERY_QUIZ_KEY);
+        }
+      }
+      if(!saved || !queue || saved.level!==level || queue.level!==level || !Array.isArray(queue.keys) || !queue.keys.length) return null;
       var idsByKey={};
       for(var i=0;i<WORDS.length;i++) idsByKey[wordKey(i)]=i;
       var ids=[], restoredIndex=0;
-      saved.keys.forEach(function(key, originalIndex){
+      queue.keys.forEach(function(key, originalIndex){
         if(idsByKey[key]===undefined) return;
         if(originalIndex<Number(saved.i||0)) restoredIndex++;
         ids.push(idsByKey[key]);
@@ -1066,7 +1142,11 @@ import {
   }
 
   function clearMasteryQuizState(){
-    try{ localStorage.removeItem(MASTERY_QUIZ_KEY); }
+    try{
+      localStorage.removeItem(LEGACY_MASTERY_QUIZ_KEY);
+      localStorage.removeItem(MASTERY_QUEUE_KEY);
+      localStorage.removeItem(MASTERY_STATE_KEY);
+    }
     catch(e){ console.warn('mastery quiz state clear failed', e); }
   }
 
@@ -1093,6 +1173,7 @@ import {
       var t=ids[i2]; ids[i2]=ids[j]; ids[j]=t;
     }
     quizState={mode:'w2m', ids:ids, i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0, level:activeLevel, currentHadWrong:false, activeQuestionId:null};
+    saveMasteryQuizQueue(quizState);
     saveMasteryQuizState(quizState);
     setView('quiz');
     renderQuizQuestion();
@@ -1363,6 +1444,7 @@ import {
       var masteryWrong=document.getElementById('qr-wrong');
       if(masteryWrong) masteryWrong.addEventListener('click', function(){
         quizState={mode:'w2m', ids:qs.wrong.slice(), i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0, level:qs.level, currentHadWrong:false, activeQuestionId:null};
+        saveMasteryQuizQueue(quizState);
         saveMasteryQuizState(quizState);
         renderQuizQuestion();
       });
