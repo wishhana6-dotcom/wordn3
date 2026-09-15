@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>JLPT</title>
+<title>JLPT 어휘노트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -662,7 +662,7 @@ import {
     if(v==='list') renderList();
     if(v==='wrong') renderWrongNote();
     if(v==='stats') renderStats();
-    if(v==='cards' && fcDeck.length===0) buildDeck();
+    if(v==='cards' && (fcDeck.length===0 || isClassifiedMode())) buildDeck();
   }
   document.querySelectorAll('.nav-item').forEach(function(el){
     el.addEventListener('click', function(){ setView(el.getAttribute('data-view')); });
@@ -869,7 +869,9 @@ import {
         '<button class="classified-move '+moveClass+'" data-id="'+id+'">'+moveLabel+'</button>'+
       '</div>';
     });
-    var quizButton=isKnown?'<button class="classified-quiz-btn" id="known-quiz-btn">찐알아요 퀴즈</button>':'';
+    var resumeInfo=isKnown?getMasteryResumeInfo(activeLevel):null;
+    var quizLabel=resumeInfo?('퀴즈 이어하기 '+Math.min(resumeInfo.current,resumeInfo.total)+'/'+resumeInfo.total):'찐알아요 퀴즈';
+    var quizButton=isKnown?'<button class="classified-quiz-btn" id="known-quiz-btn">'+quizLabel+'</button>':'';
     fcClassifiedEl.innerHTML='<div class="classified-summary"><strong>'+activeLevel+' '+title+'</strong><div class="classified-summary-actions">'+quizButton+'<span>'+fcDeck.length+'개 단어</span></div></div><div class="classified-grid">'+rows+'</div>';
     var knownQuizBtn=document.getElementById('known-quiz-btn');
     if(knownQuizBtn) knownQuizBtn.addEventListener('click', startMasteryQuiz);
@@ -1005,8 +1007,79 @@ import {
   // ================= Quiz =================
   var quizArea=document.getElementById('quiz-area');
   var quizState=null;
+  var MASTERY_QUIZ_KEY='n3-mastery-quiz-v1';
+
+  function getMasteryResumeInfo(level){
+    if(quizState && quizState.mastery && quizState.level===level){
+      return {current:quizState.i+1, total:quizState.ids.length};
+    }
+    try{
+      var saved=JSON.parse(localStorage.getItem(MASTERY_QUIZ_KEY)||'null');
+      if(saved && saved.level===level && Array.isArray(saved.keys) && saved.keys.length){
+        return {current:Number(saved.i||0)+1, total:saved.keys.length};
+      }
+    }catch(e){ console.warn('mastery quiz state read failed', e); }
+    return null;
+  }
+
+  function saveMasteryQuizState(qs){
+    if(!qs || !qs.mastery) return;
+    var data={
+      level:qs.level,
+      keys:qs.ids.map(function(id){ return wordKey(id); }),
+      i:qs.i,
+      score:qs.score,
+      wrongKeys:qs.wrong.map(function(id){ return wordKey(id); }),
+      promoted:qs.promoted,
+      currentHadWrong:!!qs.currentHadWrong,
+      activeQuestionKey:qs.activeQuestionId===null || qs.activeQuestionId===undefined ? null : wordKey(qs.activeQuestionId)
+    };
+    try{ localStorage.setItem(MASTERY_QUIZ_KEY, JSON.stringify(data)); }
+    catch(e){ console.warn('mastery quiz state save failed', e); }
+  }
+
+  function loadMasteryQuizState(level){
+    try{
+      var saved=JSON.parse(localStorage.getItem(MASTERY_QUIZ_KEY)||'null');
+      if(!saved || saved.level!==level || !Array.isArray(saved.keys) || !saved.keys.length) return null;
+      var idsByKey={};
+      for(var i=0;i<WORDS.length;i++) idsByKey[wordKey(i)]=i;
+      var ids=[], restoredIndex=0;
+      saved.keys.forEach(function(key, originalIndex){
+        if(idsByKey[key]===undefined) return;
+        if(originalIndex<Number(saved.i||0)) restoredIndex++;
+        ids.push(idsByKey[key]);
+      });
+      if(!ids.length) return null;
+      var wrong=[];
+      (saved.wrongKeys||[]).forEach(function(key){
+        if(idsByKey[key]!==undefined && wrong.indexOf(idsByKey[key])===-1) wrong.push(idsByKey[key]);
+      });
+      return {
+        mode:'w2m', ids:ids, i:Math.min(restoredIndex,ids.length), score:Number(saved.score||0),
+        wrong:wrong, answered:false, mastery:true, promoted:Number(saved.promoted||0), level:level,
+        currentHadWrong:!!saved.currentHadWrong,
+        activeQuestionId:saved.activeQuestionKey && idsByKey[saved.activeQuestionKey]!==undefined ? idsByKey[saved.activeQuestionKey] : null
+      };
+    }catch(e){
+      console.warn('mastery quiz state restore failed', e);
+      return null;
+    }
+  }
+
+  function clearMasteryQuizState(){
+    try{ localStorage.removeItem(MASTERY_QUIZ_KEY); }
+    catch(e){ console.warn('mastery quiz state clear failed', e); }
+  }
 
   function startMasteryQuiz(){
+    var resumable=(quizState && quizState.mastery && quizState.level===activeLevel) ? quizState : loadMasteryQuizState(activeLevel);
+    if(resumable){
+      quizState=resumable;
+      setView('quiz');
+      renderQuizQuestion();
+      return;
+    }
     var ids=[];
     for(var i=0;i<WORDS.length;i++){
       if(WORDS[i].level!==activeLevel) continue;
@@ -1021,7 +1094,8 @@ import {
       var j=Math.floor(Math.random()*(i2+1));
       var t=ids[i2]; ids[i2]=ids[j]; ids[j]=t;
     }
-    quizState={mode:'w2m', ids:ids.slice(0,20), i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0};
+    quizState={mode:'w2m', ids:ids, i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0, level:activeLevel, currentHadWrong:false, activeQuestionId:null};
+    saveMasteryQuizState(quizState);
     setView('quiz');
     renderQuizQuestion();
   }
@@ -1178,7 +1252,11 @@ import {
       var t=opts[k]; opts[k]=opts[j]; opts[j]=t;
     }
     qs.answered=false;
-    qs.currentHadWrong=false;
+    if(qs.activeQuestionId!==id){
+      qs.activeQuestionId=id;
+      qs.currentHadWrong=false;
+      if(qs.mastery) saveMasteryQuizState(qs);
+    }
 
     var qHtml, optsHtml='';
     if(qs.mode==='w2m'){
@@ -1235,9 +1313,14 @@ import {
             : '✓ 정답이에요!';
           document.getElementById('quiz-score').textContent='점수 '+qs.score;
           scheduleSave(); refreshSideStats();
+          if(qs.mastery){
+            qs.i++;
+            qs.activeQuestionId=null;
+            saveMasteryQuizState(qs);
+          }
           setTimeout(function(){
             if(quizState!==qs) return;
-            qs.i++;
+            if(!qs.mastery) qs.i++;
             renderQuizQuestion();
           },650);
           return;
@@ -1246,6 +1329,7 @@ import {
         qs.currentHadWrong=true;
         p.wrong++; p.box=Math.max(0,p.box-1); p.quizWrong=Number(p.quizWrong||0)+1;
         if(qs.wrong.indexOf(id)===-1) qs.wrong.push(id);
+        if(qs.mastery) saveMasteryQuizState(qs);
         scheduleSave(); refreshSideStats();
         btn.classList.add('wrong');
         btn.disabled=true;
@@ -1265,6 +1349,8 @@ import {
   function renderQuizResult(){
     var qs=quizState;
     if(qs.mastery){
+      clearMasteryQuizState();
+      quizState=null;
       quizArea.innerHTML =
         '<div class="quiz-result">'+
           '<div class="score">'+qs.score+'<small> / '+qs.ids.length+'</small></div>'+
@@ -1280,7 +1366,8 @@ import {
       });
       var masteryWrong=document.getElementById('qr-wrong');
       if(masteryWrong) masteryWrong.addEventListener('click', function(){
-        quizState={mode:'w2m', ids:qs.wrong.slice(), i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0};
+        quizState={mode:'w2m', ids:qs.wrong.slice(), i:0, score:0, wrong:[], answered:false, mastery:true, promoted:0, level:qs.level, currentHadWrong:false, activeQuestionId:null};
+        saveMasteryQuizState(quizState);
         renderQuizQuestion();
       });
       var verifiedBtn=document.getElementById('qr-verified');
