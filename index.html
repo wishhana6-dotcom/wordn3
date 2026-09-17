@@ -495,6 +495,7 @@ import {
   var activeLevel = 'N3';
   var STORE_KEY = 'n3-progress-v2';
   var LOCAL_UPDATED_KEY = STORE_KEY+'-updated-at';
+  var JOURNAL_KEY = STORE_KEY+'-journal-v1';
   var progress = {};
   var storageReady = false;
   var currentUser = null;
@@ -528,24 +529,54 @@ import {
   var saveInFlight=false;
   var savePending=false;
   var localDirty=false;
+  var pendingChanges={};
+  var pendingReset=false;
   function saveLocalNow(){
     var value=JSON.stringify(progress);
     var updatedAt=Date.now();
     try{
       localStorage.setItem(STORE_KEY, value);
       localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+      localStorage.removeItem(JOURNAL_KEY);
+      pendingChanges={};
+      pendingReset=false;
       localDirty=false;
     }
     catch(e){ console.warn('localStorage save failed', e); }
     return {value:value, updatedAt:updatedAt};
   }
-  function scheduleSave(){
-    progressRevision++;
+  function scheduleSaveTimers(){
     localDirty=true;
-    if(localSaveTimer) clearTimeout(localSaveTimer);
-    localSaveTimer=setTimeout(function(){ localSaveTimer=null; saveLocalNow(); },250);
-    if(saveTimer) clearTimeout(saveTimer);
-    saveTimer=setTimeout(saveNow, 2000);
+    if(!localSaveTimer) localSaveTimer=setTimeout(function(){ localSaveTimer=null; saveLocalNow(); },10000);
+    if(!saveTimer) saveTimer=setTimeout(saveNow,30000);
+  }
+  function writeProgressJournal(){
+    var updatedAt=Date.now();
+    try{
+      localStorage.setItem(JOURNAL_KEY, JSON.stringify({updatedAt:updatedAt, reset:pendingReset, changes:pendingChanges}));
+      localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+    }catch(e){
+      console.warn('progress journal save failed', e);
+      saveLocalNow();
+    }
+  }
+  function scheduleSave(id){
+    if(typeof id==='number') pendingChanges[wordKey(id)]=progress[wordKey(id)]||null;
+    writeProgressJournal();
+    scheduleSaveTimers();
+    if(currentUser) setSyncStatus('기기에 저장됨 · 동기화 대기');
+  }
+  function scheduleFullSave(){
+    progressRevision++;
+    saveLocalNow();
+    if(!saveTimer) saveTimer=setTimeout(saveNow,30000);
+  }
+  function scheduleResetSave(){
+    progressRevision++;
+    pendingReset=true;
+    pendingChanges={};
+    writeProgressJournal();
+    scheduleSaveTimers();
   }
   function flushLocalProgress(){
     if(!localDirty) return;
@@ -553,7 +584,10 @@ import {
     saveLocalNow();
   }
   document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState==='hidden') flushLocalProgress();
+    if(document.visibilityState==='hidden'){
+      flushLocalProgress();
+      if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; saveNow(); }
+    }
   });
   window.addEventListener('pagehide', flushLocalProgress);
   function setSyncStatus(message){
@@ -592,24 +626,35 @@ import {
     }
   }
   async function loadLocalProgress(){
+    var base={};
     try{
       var localValue=localStorage.getItem(STORE_KEY);
-      if(localValue) return JSON.parse(localValue);
+      if(localValue) base=JSON.parse(localValue);
     }catch(e){ console.warn('localStorage load failed', e); }
-    try{
+    if(!Object.keys(base).length) try{
       if(window.storage && window.storage.get){
         var legacy=await window.storage.get(STORE_KEY, false);
         if(legacy && legacy.value){
           localStorage.setItem(STORE_KEY, legacy.value);
-          return JSON.parse(legacy.value);
+          base=JSON.parse(legacy.value);
         }
       }
     }catch(e){ console.warn('legacy storage load failed', e); }
-    return {};
+    try{
+      var journal=JSON.parse(localStorage.getItem(JOURNAL_KEY)||'null');
+      if(journal){
+        if(journal.reset) base={};
+        Object.keys(journal.changes||{}).forEach(function(key){
+          if(journal.changes[key]===null) delete base[key];
+          else base[key]=journal.changes[key];
+        });
+      }
+    }catch(e){ console.warn('progress journal restore failed', e); }
+    return base;
   }
   async function loadProgress(){
     var localExists=false;
-    try{ localExists=localStorage.getItem(STORE_KEY)!==null; }
+    try{ localExists=localStorage.getItem(STORE_KEY)!==null || localStorage.getItem(JOURNAL_KEY)!==null; }
     catch(e){ console.warn('localStorage status read failed', e); }
     var localMigration=migrateProgress(await loadLocalProgress());
     var localProgress=localMigration.data;
@@ -637,6 +682,10 @@ import {
             var acceptedAt=cloudUpdatedAt||Date.now();
             localStorage.setItem(STORE_KEY, JSON.stringify(progress));
             localStorage.setItem(LOCAL_UPDATED_KEY, String(acceptedAt));
+            localStorage.removeItem(JOURNAL_KEY);
+            pendingChanges={};
+            pendingReset=false;
+            localDirty=false;
           }
         }else if(Object.keys(localProgress).length){
           var firstCloudAt=localUpdatedAt||Date.now();
@@ -653,7 +702,7 @@ import {
     storageReady = true;
     progressRevision++;
     refreshSideStats();
-    if(shouldSaveMigration) scheduleSave();
+    if(shouldSaveMigration) scheduleFullSave();
   }
 
   function updateAuthUI(){
@@ -745,6 +794,24 @@ import {
     var summary=getLevelSummary(activeLevel);
     document.getElementById('ss-learned').textContent=summary.learned;
     document.getElementById('ss-mastered').textContent=summary.mastered;
+  }
+
+  function summaryState(p){
+    return {
+      learned:!!(p && p.seen>0),
+      mastered:!!(p && p.box>=5),
+      classified:!!(p && (p.cardStatus==='known' || p.cardStatus==='unknown' || p.cardStatus==='verified'))
+    };
+  }
+
+  function updateSummaryAfterWordChange(id, before){
+    var level=WORDS[id].level;
+    var cached=levelSummaryCache[level];
+    if(!cached || cached.revision!==progressRevision) return;
+    var after=summaryState(pOf(id));
+    cached.learned += Number(after.learned)-Number(before.learned);
+    cached.mastered += Number(after.mastered)-Number(before.mastered);
+    cached.classified += Number(after.classified)-Number(before.classified);
   }
 
   var FILTERS=[
@@ -925,7 +992,7 @@ import {
       button.addEventListener('click', function(){
         var id=Number(button.getAttribute('data-id'));
         getP(id).cardStatus=(isKnown?'unknown':'known');
-        scheduleSave();
+        scheduleSave(id);
         refreshSideStats();
         buildDeck();
       });
@@ -945,17 +1012,19 @@ import {
     var p=getP(id);
     p.star=!p.star;
     starBtn.classList.toggle('on', p.star);
-    scheduleSave();
+    scheduleSave(id);
   });
 
   function advance(known){
     if(!fcDeck.length || isClassifiedMode()) return;
     var id=fcDeck[fcIndex];
+    var beforeSummary=summaryState(pOf(id));
     var p=getP(id);
     p.seen++;
     if(known){ p.correct++; p.box=Math.min(5,p.box+1); p.cardStatus='known'; }
     else{ p.wrong++; p.box=Math.max(0,p.box-1); p.cardStatus='unknown'; }
-    scheduleSave();
+    updateSummaryAfterWordChange(id, beforeSummary);
+    scheduleSave(id);
     refreshSideStats();
     fcDeck.splice(fcIndex,1);
     if(fcIndex>=fcDeck.length) fcIndex=0;
@@ -1028,7 +1097,7 @@ import {
       row.addEventListener('click', function(ev){
         if(ev.target.classList.contains('star')){
           ev.stopPropagation();
-          var p=getP(id); p.star=!p.star; scheduleSave();
+          var p=getP(id); p.star=!p.star; scheduleSave(id);
           ev.target.classList.toggle('on', p.star);
           return;
         }
@@ -1374,6 +1443,7 @@ import {
         if(qs.answered) return;
         var picked=parseInt(btn.getAttribute('data-id'),10);
         var correct = picked===id;
+        var beforeSummary=summaryState(pOf(id));
         var p=getP(id);
         p.seen++;
         if(correct){
@@ -1381,6 +1451,7 @@ import {
           p.correct++; p.box=Math.min(5,p.box+1);
           if(!qs.currentHadWrong) qs.score++;
           if(qs.mastery && !qs.currentHadWrong){ p.cardStatus='verified'; qs.promoted++; }
+          updateSummaryAfterWordChange(id, beforeSummary);
           Array.from(quizArea.querySelectorAll('.quiz-opt')).forEach(function(b2){
             b2.disabled=true;
             if(parseInt(b2.getAttribute('data-id'),10)===id) b2.classList.add('correct');
@@ -1389,7 +1460,7 @@ import {
           feedback.className='quiz-feedback';
           feedback.textContent='';
           document.getElementById('quiz-score').textContent='점수 '+qs.score;
-          scheduleSave(); refreshSideStats();
+          scheduleSave(id); refreshSideStats();
           if(qs.mastery){
             qs.i++;
             qs.activeQuestionId=null;
@@ -1405,9 +1476,10 @@ import {
         qs.answered=true;
         qs.currentHadWrong=true;
         p.wrong++; p.box=Math.max(0,p.box-1); p.quizWrong=Number(p.quizWrong||0)+1;
+        updateSummaryAfterWordChange(id, beforeSummary);
         if(qs.wrong.indexOf(id)===-1) qs.wrong.push(id);
         if(qs.mastery) saveMasteryQuizState(qs);
-        scheduleSave(); refreshSideStats();
+        scheduleSave(id); refreshSideStats();
         btn.classList.add('wrong');
         btn.disabled=true;
         var optionsEl=quizArea.querySelector('.quiz-opts');
@@ -1512,7 +1584,7 @@ import {
     document.getElementById('reset-progress').addEventListener('click', function(){
       if(confirm('모든 학습 기록을 초기화할까요? 되돌릴 수 없습니다.')){
         progress={};
-        scheduleSave();
+        scheduleResetSave();
         refreshSideStats();
         renderStats();
       }
