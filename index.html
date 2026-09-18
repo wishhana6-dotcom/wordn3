@@ -754,7 +754,15 @@ import {
     if(v==='cards' && (fcDeck.length===0 || isClassifiedMode())) buildDeck();
   }
   document.querySelectorAll('.nav-item').forEach(function(el){
-    el.addEventListener('click', function(){ setView(el.getAttribute('data-view')); });
+    el.addEventListener('click', function(){
+      var targetView=el.getAttribute('data-view');
+      if(targetView==='quiz'){
+        if(quizState && quizState.mastery) saveMasteryQuizState(quizState);
+        quizState=null;
+        renderQuizSetup();
+      }
+      setView(targetView);
+    });
   });
 
   function setLevel(level){
