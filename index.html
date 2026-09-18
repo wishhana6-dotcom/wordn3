@@ -1390,6 +1390,160 @@ import {
     return out;
   }
 
+  var similarDistractorCache={};
+
+  function normalizeKana(text){
+    return String(text||'').replace(/[\u30a1-\u30f6]/g,function(ch){
+      return String.fromCharCode(ch.charCodeAt(0)-0x60);
+    }).replace(/[\s・･ー]/g,'');
+  }
+
+  function editDistance(a,b){
+    a=String(a||''); b=String(b||'');
+    if(a===b) return 0;
+    if(!a.length) return b.length;
+    if(!b.length) return a.length;
+    var prev=[];
+    for(var j=0;j<=b.length;j++) prev[j]=j;
+    for(var i=1;i<=a.length;i++){
+      var curr=[i];
+      for(var j2=1;j2<=b.length;j2++){
+        curr[j2]=Math.min(
+          curr[j2-1]+1,
+          prev[j2]+1,
+          prev[j2-1]+(a.charAt(i-1)===b.charAt(j2-1)?0:1)
+        );
+      }
+      prev=curr;
+    }
+    return prev[b.length];
+  }
+
+  function commonEdgeLength(a,b,fromEnd){
+    var count=0, limit=Math.min(a.length,b.length);
+    while(count<limit){
+      var ai=fromEnd?a.length-1-count:count;
+      var bi=fromEnd?b.length-1-count:count;
+      if(a.charAt(ai)!==b.charAt(bi)) break;
+      count++;
+    }
+    return count;
+  }
+
+  function bigramOverlap(a,b){
+    if(a.length<2 || b.length<2) return a===b?1:0;
+    var grams={};
+    for(var i=0;i<a.length-1;i++) grams[a.slice(i,i+2)]=true;
+    var hit=0, total=0, seen={};
+    for(var j=0;j<b.length-1;j++){
+      var gram=b.slice(j,j+2);
+      if(seen[gram]) continue;
+      seen[gram]=true; total++;
+      if(grams[gram]) hit++;
+    }
+    return hit/Math.max(1,total);
+  }
+
+  function kanaSimilarityScore(a,b,alreadyNormalized){
+    if(!alreadyNormalized){ a=normalizeKana(a); b=normalizeKana(b); }
+    if(!a || !b || a===b) return -999;
+    var maxLen=Math.max(a.length,b.length);
+    var closeness=1-(editDistance(a,b)/maxLen);
+    var score=closeness*70+bigramOverlap(a,b)*32;
+    score+=commonEdgeLength(a,b,false)*13;
+    score+=commonEdgeLength(a,b,true)*9;
+    score-=Math.abs(a.length-b.length)*8;
+    if(a.length===b.length) score+=18;
+    return score;
+  }
+
+  var LOOKALIKE_KANJI={
+    '人':'入八','入':'人八','八':'人入','日':'目田白','目':'日自','田':'日由甲','白':'日百','未':'末朱','末':'未朱',
+    '土':'士工','士':'土工','千':'干午','干':'千午','午':'牛千','牛':'午生','王':'玉主','玉':'王主','今':'令','令':'今',
+    '大':'太犬','太':'大犬','犬':'大太','木':'本未末','本':'木末','右':'石','石':'右','鳥':'島','島':'鳥','問':'間聞','間':'問聞','聞':'問間',
+    '持':'待特','待':'持特','特':'持待','晴':'清情','清':'晴情','情':'晴清','校':'効郊','効':'校郊','近':'返遠','返':'近遠','買':'貝売','貝':'買見','見':'貝覚'
+  };
+
+  function kanjiChars(text){
+    return String(text||'').match(/[\u3400-\u9fff々]/g)||[];
+  }
+
+  var quizReadingCache=[], quizKanjiCharCache=[];
+  function normalizedReadingOf(id){
+    if(quizReadingCache[id]===undefined) quizReadingCache[id]=normalizeKana(WORDS[id].r);
+    return quizReadingCache[id];
+  }
+  function kanjiCharsOf(id){
+    if(quizKanjiCharCache[id]===undefined) quizKanjiCharCache[id]=kanjiChars(WORDS[id].w);
+    return quizKanjiCharCache[id];
+  }
+
+  function kanjiSimilarityScore(correct,candidate,correctId,candidateId){
+    var a=String(correct.w||''), b=String(candidate.w||'');
+    if(!a || !b || a===b) return -999;
+    var ac=kanjiCharsOf(correctId), bc=kanjiCharsOf(candidateId);
+    if(!ac.length || !bc.length) return -999;
+    var score=0;
+    if(a.length===b.length) score+=22;
+    score-=Math.abs(a.length-b.length)*8;
+    var used={};
+    ac.forEach(function(ch){
+      for(var i=0;i<bc.length;i++){
+        if(!used[i] && ch===bc[i]){ score+=30; used[i]=true; break; }
+      }
+    });
+    var positional=Math.min(a.length,b.length);
+    for(var p=0;p<positional;p++){
+      if(a.charAt(p)===b.charAt(p)) score+=18;
+      else if((LOOKALIKE_KANJI[a.charAt(p)]||'').indexOf(b.charAt(p))!==-1) score+=15;
+    }
+    var correctReading=normalizedReadingOf(correctId), candidateReading=normalizedReadingOf(candidateId);
+    score+=correctReading===candidateReading
+      ? 35
+      : Math.max(-10,kanaSimilarityScore(correctReading,candidateReading,true)*0.18);
+    return score;
+  }
+
+  function pickSimilarDistractors(correctId,n,kind){
+    var cacheKey=activeLevel+'|'+kind+'|'+correctId;
+    var ranked=similarDistractorCache[cacheKey];
+    var correct=WORDS[correctId];
+    if(!ranked){
+      ranked=[];
+      var correctReading=normalizedReadingOf(correctId);
+      for(var i=0;i<WORDS.length;i++){
+        if(i===correctId || WORDS[i].level!==activeLevel || !hasKanji(WORDS[i].w)) continue;
+        var candidateReading=normalizedReadingOf(i);
+        if(kind==='reading' && candidateReading===correctReading) continue;
+        if(kind==='kanji' && WORDS[i].w===correct.w) continue;
+        if(kind==='reading' && Math.abs(candidateReading.length-correctReading.length)>2) continue;
+        if(kind==='kanji' && Math.abs(WORDS[i].w.length-correct.w.length)>1) continue;
+        var score=kind==='reading'
+          ? kanaSimilarityScore(correctReading,candidateReading,true)
+          : kanjiSimilarityScore(correct,WORDS[i],correctId,i);
+        ranked.push({id:i,score:score});
+      }
+      ranked.sort(function(a,b){ return b.score-a.score; });
+      ranked=ranked.slice(0,Math.max(40,n*12)).map(function(item){ return item.id; });
+      similarDistractorCache[cacheKey]=ranked;
+    }
+    var candidates=ranked.slice(0,Math.min(16,ranked.length));
+    for(var j=candidates.length-1;j>0;j--){
+      var swap=Math.floor(Math.random()*(j+1));
+      var t=candidates[j]; candidates[j]=candidates[swap]; candidates[swap]=t;
+    }
+    candidates=candidates.concat(ranked.slice(candidates.length));
+    var out=[], used={};
+    for(var k=0;k<candidates.length && out.length<n;k++){
+      var id=candidates[k];
+      var shown=kind==='reading'?normalizeKana(WORDS[id].r):WORDS[id].w;
+      if(used[shown]) continue;
+      used[shown]=true;
+      out.push(id);
+    }
+    return out;
+  }
+
   function renderQuizQuestion(){
     var qs=quizState;
     if(qs.i>=qs.ids.length){ renderQuizResult(); return; }
@@ -1397,9 +1551,9 @@ import {
     var w=WORDS[id];
     var opts;
     if(qs.mode==='k2r'){
-      opts=pickDistractors(id,3,{kanjiOnly:true, excludeText:w.r, textOf:function(rid){return WORDS[rid].r;}}).concat([id]);
+      opts=pickSimilarDistractors(id,3,'reading').concat([id]);
     } else if(qs.mode==='r2k'){
-      opts=pickDistractors(id,3,{kanjiOnly:true, excludeText:w.w, textOf:function(rid){return WORDS[rid].w;}}).concat([id]);
+      opts=pickSimilarDistractors(id,3,'kanji').concat([id]);
     } else {
       opts=pickDistractors(id,3).concat([id]);
     }
