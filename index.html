@@ -23,7 +23,7 @@
   --r:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;height:100%;touch-action:manipulation;overscroll-behavior-y:contain;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;padding:0;height:100%;max-width:100%;overflow-x:hidden;touch-action:manipulation;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html.modal-open,body.modal-open{overflow:hidden;overscroll-behavior:none}
 body{
   background:#E9EBEF;color:var(--ink);
@@ -57,7 +57,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .sect-h b{font-size:13.5px;font-weight:800;letter-spacing:-.2px}
 .sect-h .l{font-size:11px;color:var(--sub);font-weight:600}
 .muted{color:var(--sub);font-weight:600;font-size:11px}
-.ex{color:var(--ex)}.inc{color:var(--inc)}
+.ex{color:var(--ex)}.inc{color:var(--inc)}.vio{color:var(--violet)}
 
 /* ---------- 잔액 카드 ---------- */
 .bal{
@@ -114,6 +114,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .sd-sum i{width:5px;height:5px;border-radius:50%;display:block;margin-right:4px}
 .sd-sum i.d-in{background:var(--inc)}.sd-sum i.d-out{background:var(--ex)}.sd-sum i.d-card{background:#7B3FE4}
 .sd-sum b{font-size:11.5px;font-weight:800;color:#3A4048;margin-left:3px;font-variant-numeric:tabular-nums}
+.sd-sum b.inc{color:var(--inc)}.sd-sum b.ex{color:var(--ex)}.sd-sum b.vio{color:#7B3FE4}
 .selday .items{border-radius:0;border-top:1px solid #F5F6F8}
 .sd-empty{text-align:center;color:var(--sub);font-size:11.5px;font-weight:600;padding:18px 10px;border-top:1px solid #F5F6F8}
 .cell .am{
@@ -161,7 +162,8 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 
 /* ---------- 내역 목록 ---------- */
 .daygroup{margin:12px 0 0}
-.daygroup .dh{display:flex;justify-content:space-between;align-items:center;padding:0 6px 6px;font-size:11.5px;color:var(--sub);font-weight:700}
+.daygroup .dh{display:flex;justify-content:space-between;align-items:center;padding:0 6px 6px;font-size:11.5px;color:var(--sub);font-weight:700;gap:8px}
+.daygroup .dh > span:last-child{display:inline-flex;align-items:baseline;gap:7px;flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}
 .daygroup .dh b{color:#3A4048;font-size:12.5px;font-weight:800;margin-right:5px}
 .items{background:#fff;border-radius:16px;overflow:hidden}
 .item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid #F5F6F8;width:100%;border:0;background:#fff;text-align:left;cursor:pointer}
@@ -171,6 +173,9 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .item .nm{display:block;font-size:13px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item .meta{display:block;font-size:10.5px;color:var(--sub);font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item .amt{font-size:13.5px;font-weight:800;letter-spacing:-.4px;text-align:right;flex:0 0 auto}
+.item .amt.inc{color:var(--inc)}
+.item .amt.ex{color:var(--ex)}
+.item .amt.vio{color:#7B3FE4}
 .tag{display:inline-block;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:5px;margin-left:4px;vertical-align:1px}
 .tag.inst{background:#F0EDFF;color:#6A57E8}
 .tag.fix{background:var(--mint-soft);color:#0A8A7A}
@@ -195,8 +200,8 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .modal .bg{position:absolute;inset:0;background:rgba(16,22,28,.42);animation:fade .18s ease;touch-action:none}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .sheet{
-  position:relative;margin-top:auto;width:100%;max-width:430px;max-height:94dvh;background:#fff;
-  border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;
+  position:relative;margin-top:auto;width:100%;max-width:430px;max-height:88dvh;background:#fff;
+  border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain;
   animation:up .24s cubic-bezier(.2,.9,.3,1);margin-left:auto;margin-right:auto;
 }
 @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -207,7 +212,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 @keyframes zoom{from{transform:scale(.94);opacity:.6}to{transform:scale(1);opacity:1}}
 .sh-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--line);flex:0 0 auto}
 .sh-head .ttl{font-size:15.5px;font-weight:800;letter-spacing:-.4px}
-.sh-body{overflow-y:auto;padding:14px 16px 8px;flex:1;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sh-body{overflow-y:auto;padding:14px 16px 8px;flex:1;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 .sh-foot{flex:0 0 auto;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:#fff}
 .xbtn{width:28px;height:28px;border-radius:50%;border:0;background:#F2F4F6;color:#6C747E;font-size:15px;display:grid;place-items:center}
 .pill{display:flex;background:#F2F4F6;border-radius:12px;padding:3px;gap:3px}
@@ -285,6 +290,24 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .addrow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:16px;font-weight:700;outline:0}
 .addrow input:focus{border-color:var(--mint)}
 .addrow button{border:0;background:var(--mint);color:#fff;border-radius:11px;padding:0 13px;font-size:12.5px;font-weight:800;flex:0 0 auto;white-space:nowrap}
+
+/* ---------- 할부 관리 ---------- */
+.irow{width:100%;display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:0;border-bottom:1px solid #F5F6F8;background:#fff;text-align:left;color:inherit;cursor:pointer}
+.irow:last-child{border-bottom:0}
+.irow:active{background:#FAFBFC}
+.irow .iic{width:32px;height:32px;border-radius:10px;background:#F4F6F8;display:grid;place-items:center;font-size:15px;flex:0 0 auto}
+.irow .imain{flex:1;min-width:0;display:block}
+.irow .itop{display:flex;align-items:center;gap:5px}
+.irow .inm{font-size:13px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.irow .iseq{font-size:9.5px;font-weight:800;color:#6A57E8;background:#F0EDFF;border-radius:5px;padding:1px 5px;flex:0 0 auto}
+.irow .itot{font-size:12.5px;font-weight:800;letter-spacing:-.3px;margin-left:auto;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.irow .isub{display:block;font-size:10.5px;color:var(--sub);font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.irow .isub b{color:#3A4048;font-weight:800}
+.irow .iprog{display:block;height:4px;border-radius:3px;background:#F0F2F5;margin-top:7px;overflow:hidden}
+.irow .iprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8B7CF8,#6A57E8)}
+.irow.done .iseq{background:#F2F4F6;color:#8B929C}
+.irow.done .iprog i{background:#D8DDE3}
+.irow.done .itot{color:var(--sub)}
 
 /* ---------- 토스트 ---------- */
 #toast{
@@ -386,6 +409,23 @@ var CORE = (function () {
     if (n === 1) return diff === 0 ? Math.round(Number(tx.amount) || 0) : 0;
     if (diff >= n) return 0;
     return installmentParts(tx)[diff];
+  }
+
+  /* ---- 할부 한 건의 진행 상황 (할부 관리 목록용) ---- */
+  function installmentInfo(tx, ym) {
+    var n = normMonths(tx);
+    var start = ymOf(tx.date);
+    var total = Math.max(0, Math.round(Number(tx.amount) || 0));
+    var parts = installmentParts(tx);
+    var cur = monthDiff(start, ym) + 1;   /* 1회차 = 결제월 */
+    var paid = 0, remain = 0;
+    for (var i = 0; i < n; i++) { if (i < cur - 1) paid += parts[i]; else remain += parts[i]; }
+    return {
+      months: n, start: start, end: ymAdd(start, n - 1),
+      total: total, parts: parts, monthly: n > 1 ? parts[1] : parts[0],
+      cur: cur, seq: Math.min(Math.max(cur, 0), n), paid: paid, remain: remain,
+      done: cur > n, before: cur < 1
+    };
   }
 
   /* ---- 정기 지출/수입 ---- */
@@ -578,7 +618,8 @@ var CORE = (function () {
     pad2: pad2, ymd: ymd, ymOf: ymOf, ymParts: ymParts, daysInMonth: daysInMonth,
     clampDay: clampDay, ymAdd: ymAdd, monthDiff: monthDiff, cmpYm: cmpYm, dayDiff: dayDiff,
     todayStr: todayStr, normMonths: normMonths, installmentParts: installmentParts,
-    txAmountInMonth: txAmountInMonth, subActiveIn: subActiveIn, subDayIn: subDayIn,
+    txAmountInMonth: txAmountInMonth, installmentInfo: installmentInfo,
+    subActiveIn: subActiveIn, subDayIn: subDayIn,
     entriesForMonth: entriesForMonth, monthSummary: monthSummary, carryInFor: carryInFor,
     monthFull: monthFull, sumExpenseInRange: sumExpenseInRange, budgetStats: budgetStats,
     findBudgetAt: findBudgetAt, startYmOf: startYmOf
@@ -792,6 +833,12 @@ var App = (function () {
     return methodName(e.method);
   }
   function monthTitle(ym) { var p = CORE.ymParts(ym); return p.y + '년 ' + p.m + '월'; }
+  function amtClass(e) { return e.type === 'income' ? 'inc' : (e.method === 'credit' ? 'vio' : 'ex'); }
+  function isInst(tx) { return CORE.normMonths(tx) > 1; }
+  function installments() {
+    return (db.transactions || []).filter(isInst).slice()
+      .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
 
   /* ---------------- 렌더 ---------------- */
   function render() {
@@ -969,9 +1016,9 @@ var App = (function () {
       '<div class="sd-head"><div class="sd-date">' + p[1] + '월 ' + p[2] + '일 <span class="dow">(' + dow + ')</span></div>' +
       '<button class="sd-add" onclick="App.openInput({date:\'' + date + '\'})">+ 내역</button></div>' +
       '<div class="sd-sum">' +
-      '<span><i class="d-in"></i>수입<b>' + fmt(inc) + '</b></span>' +
-      '<span><i class="d-out"></i>통장<b>' + fmt(cash) + '</b></span>' +
-      '<span><i class="d-card"></i>카드<b>' + fmt(card) + '</b></span>' +
+      '<span><i class="d-in"></i>수입<b class="inc">' + fmt(inc) + '</b></span>' +
+      '<span><i class="d-out"></i>통장<b class="ex">' + fmt(cash) + '</b></span>' +
+      '<span><i class="d-card"></i>카드<b class="vio">' + fmt(card) + '</b></span>' +
       '</div>';
     if (!items.length) {
       h += '<div class="sd-empty">이 날 기록이 없어요</div>';
@@ -986,7 +1033,7 @@ var App = (function () {
           '<span class="ic">' + catEmoji(e.type, e.catId) + '</span>' +
           '<span class="mid"><span class="nm">' + esc(nm) + tag + '</span>' +
           '<span class="meta">' + esc(methodLabel(e)) + (e.memo ? ' · ' + esc(e.memo) : '') + '</span></span>' +
-          '<span class="amt ' + (e.type === 'income' ? 'inc' : '') + '">' + (e.type === 'income' ? '+' : '-') + fmt(e.amount) + '</span></button>';
+          '<span class="amt ' + amtClass(e) + '">' + (e.type === 'income' ? '+' : '-') + fmt(e.amount) + '</span></button>';
       });
       h += '</div>';
     }
@@ -1031,10 +1078,13 @@ var App = (function () {
       var items = groups[dt];
       var dayExp = items.filter(function (e) { return e.type === 'expense'; }).reduce(function (a, e) { return a + e.amount; }, 0);
       var dayInc = items.filter(function (e) { return e.type === 'income'; }).reduce(function (a, e) { return a + e.amount; }, 0);
+      var dayCard = items.filter(function (e) { return e.type === 'expense' && e.method === 'credit'; }).reduce(function (a, e) { return a + e.amount; }, 0);
+      var dayCash = dayExp - dayCard;
       var dow = ['일', '월', '화', '수', '목', '금', '토'][new Date(Date.parse(dt + 'T00:00:00')).getDay()];
       h += '<div class="daygroup"><div class="dh"><span><b>' + Number(dt.slice(5, 7)) + '월 ' + Number(dt.slice(8)) + '일</b>' + dow + '</span><span>' +
         (dayInc ? '<span class="inc">+' + fmt(dayInc) + '</span> ' : '') +
-        (dayExp ? '<span class="ex">-' + fmt(dayExp) + '</span>' : '') + '</span></div>';
+        (dayCash ? '<span class="ex">-' + fmt(dayCash) + '</span> ' : '') +
+        (dayCard ? '<span class="vio">-' + fmt(dayCard) + '</span>' : '') + '</span></div>';
       h += '<div class="items">';
       items.forEach(function (e) {
         var nm = e.kind === 'fixed' ? (e.name || '정기') : catName(e.type, e.catId);
@@ -1047,7 +1097,7 @@ var App = (function () {
           '<span class="ic">' + catEmoji(e.type, e.catId) + '</span>' +
           '<span class="mid"><span class="nm">' + esc(nm) + tag + '</span>' +
           '<span class="meta">' + meta + '</span></span>' +
-          '<span class="amt ' + (e.type === 'income' ? 'inc' : '') + '">' + (e.type === 'income' ? '+' : '-') + fmt(e.amount) + '</span></button>';
+          '<span class="amt ' + amtClass(e) + '">' + (e.type === 'income' ? '+' : '-') + fmt(e.amount) + '</span></button>';
       });
       h += '</div></div>';
     });
@@ -1175,14 +1225,49 @@ var App = (function () {
     h += '<div class="slist">';
     (db.subscriptions || []).forEach(function (s) {
       var dayTxt = s.day === 'end' ? '매월 말일' : '매월 ' + s.day + '일';
+      var subStart = s.startMonth ? String(s.startMonth).slice(0, 7) : '';
+      var future = subStart && CORE.cmpYm(subStart, CORE.ymOf(today())) > 0;
       h += '<div class="srow">' +
         '<button class="switch ' + (s.active === false ? '' : 'on') + '" onclick="App.toggleSub(\'' + s.id + '\')"><i></i></button>' +
         '<div class="txt"><div class="t1">' + esc(s.name) + ' <span class="' + (s.type === 'income' ? 'inc' : 'ex') + '">' + (s.type === 'income' ? '+' : '-') + fmt(s.amount) + '</span></div>' +
-        '<div class="t2">' + dayTxt + ' · ' + methodLabel({ method: s.method, cardId: s.cardId }) + (s.endMonth ? ' · ' + s.endMonth + '까지' : '') + '</div></div>' +
+        '<div class="t2">' + dayTxt + ' · ' + methodLabel({ method: s.method, cardId: s.cardId }) +
+        (future ? ' · ' + subStart + '부터' : '') + (s.endMonth ? ' · ' + s.endMonth + '까지' : '') + '</div></div>' +
         '<button class="act" onclick="App.openSubForm(\'' + s.id + '\')">수정</button>' +
         '</div>';
     });
     h += '<div class="addrow"><button style="width:100%" onclick="App.openSubForm()">+ 정기 지출/수입 추가</button></div>';
+    h += '</div>';
+
+    /* 할부 */
+    var insts = installments();
+    var curYm = CORE.ymOf(today());
+    var liveN = 0, liveMonth = 0, liveRemain = 0;
+    insts.forEach(function (t) {
+      var f = CORE.installmentInfo(t, curYm);
+      if (!f.done) { liveN++; liveMonth += f.monthly; liveRemain += f.remain; }
+    });
+    h += '<div class="sect-h"><b>할부 관리</b><span class="l">' + (liveN ? '진행 중 ' + liveN + '건 · 월 ' + fmt(liveMonth) + '원' : '전체 ' + insts.length + '건') + '</span></div>';
+    h += '<div class="slist">';
+    if (!insts.length) {
+      h += '<div class="srow"><div class="txt"><div class="t2">등록된 할부가 없어요</div></div></div>';
+    }
+    insts.forEach(function (t) {
+      var f = CORE.installmentInfo(t, curYm);
+      var cardNm = t.method === 'credit' ? ((cardById(t.cardId) || {}).name || '카드') : methodName(t.method);
+      var nm = (t.memo || '').trim() || catName(t.type, t.catId) + ' 할부';
+      var pct = Math.round(f.seq / f.months * 100);
+      h += '<button class="irow ' + (f.done ? 'done' : '') + '" onclick="App.openEntry(\'installment\',\'' + t.id + '\')">' +
+        '<span class="iic">' + catEmoji(t.type, t.catId) + '</span>' +
+        '<span class="imain">' +
+        '<span class="itop"><span class="inm">' + esc(nm) + '</span>' +
+        '<span class="iseq">' + (f.done ? '완납' : f.seq + '/' + f.months + '회차') + '</span>' +
+        '<span class="itot">' + won(f.total) + '</span></span>' +
+        '<span class="isub">' + esc(cardNm) + ' · 월 ' + fmt(f.monthly) + '원 · ' + f.start + '~' + f.end + '</span>' +
+        '<span class="isub">' + (f.done ? '모든 회차 반영됨' : '남은 금액 <b>' + won(f.remain) + '</b>') + '</span>' +
+        '<span class="iprog"><i style="width:' + pct + '%"></i></span>' +
+        '</span></button>';
+    });
+    h += '<div class="addrow"><button style="width:100%" onclick="App.openNewInstallment()">+ 할부 추가</button></div>';
     h += '</div>';
 
     /* 이월 */
@@ -1226,10 +1311,10 @@ var App = (function () {
       amount: '',
       date: (prefill && prefill.date) || t,
       catId: null,
-      method: 'credit',
-      cardId: (db.cards[0] || {}).id || null,
+      method: (prefill && prefill.method) || 'credit',
+      cardId: (prefill && prefill.cardId) || (db.cards[0] || {}).id || null,
       memo: '',
-      months: 1,
+      months: (prefill && prefill.months) || 1,
       editId: null
     };
     if (prefill && prefill.tx) {
@@ -1372,24 +1457,55 @@ var App = (function () {
   }
 
   /* ---------------- 모달 ---------------- */
+  /* iOS Safari: 키보드가 올라와도 뒷배경·시트가 밀리지 않도록 body를 fixed로 고정 */
+  var lockY = 0, lockScr = 0;
+  function lockPage() {
+    var scr = document.getElementById('scr');
+    lockScr = scr ? scr.scrollTop : 0;
+    lockY = window.scrollY || window.pageYOffset || 0;
+    var b = document.body.style;
+    b.position = 'fixed'; b.top = (-lockY) + 'px'; b.left = '0'; b.right = '0'; b.width = '100%';
+    b.overflow = 'hidden';
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
+  }
+  function unlockPage() {
+    var b = document.body.style;
+    b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = ''; b.overflow = '';
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
+    window.scrollTo(0, lockY || 0);
+    var scr = document.getElementById('scr');
+    if (scr) scr.scrollTop = lockScr || 0;
+    st._scroll = lockScr || 0;
+  }
+  function hideModal() {
+    var m = document.getElementById('modal');
+    if (!m) return false;
+    var wasOpen = !m.classList.contains('hidden');
+    m.classList.add('hidden');
+    m.innerHTML = '';
+    st.sheet = null;
+    if (wasOpen) unlockPage();
+    else { document.documentElement.classList.remove('modal-open'); document.body.classList.remove('modal-open'); }
+    return wasOpen;
+  }
   function showModal(html, isDialog) {
     var m = document.getElementById('modal');
+    if (!m) return;
+    var wasOpen = !m.classList.contains('hidden');
     var prevBody = m.querySelector('.sh-body');
     var prevTop = prevBody ? prevBody.scrollTop : 0;
     m.innerHTML = '<div class="bg" onclick="App.closeModal()"></div>' + html;
     m.classList.remove('hidden');
     var nextBody = m.querySelector('.sh-body');
     if (nextBody && prevBody) nextBody.scrollTop = prevTop;
-    document.documentElement.classList.add('modal-open');
-    document.body.classList.add('modal-open');
+    /* 같은 시트를 다시 그릴 때는 올라오는 애니메이션을 생략(화면 흔들림 방지) */
+    if (wasOpen) { var sh = m.querySelector('.sheet'); if (sh) sh.style.animation = 'none'; }
+    else lockPage();
   }
   function closeModal() {
-    var m = document.getElementById('modal');
-    m.classList.add('hidden');
-    m.innerHTML = '';
-    document.documentElement.classList.remove('modal-open');
-    document.body.classList.remove('modal-open');
-    st.sheet = null;
+    hideModal();
     if (location.hash === '#input') history.replaceState(null, '', '#' + st.route);
   }
 
@@ -1407,12 +1523,7 @@ var App = (function () {
       st._scroll = 0;
       st.route = route;
       if (route !== 'budget') st.budgetId = null;
-      var m = document.getElementById('modal');
-      if (m && !m.classList.contains('hidden')) {
-        m.classList.add('hidden'); m.innerHTML = ''; st.sheet = null;
-        document.documentElement.classList.remove('modal-open');
-        document.body.classList.remove('modal-open');
-      }
+      hideModal();
       render();
       if (location.hash !== '#' + route) history.replaceState(null, '', '#' + route);
       document.getElementById('scr').scrollTop = 0;
@@ -1449,6 +1560,8 @@ var App = (function () {
 
     /* 입력 */
     openInput: openInput,
+    openNewInstallment: function () { openInput({ type: 'expense', method: 'credit', months: 3 }); },
+    openInstallmentList: function () { api.goto('settings'); },
     addForSelected: function () {
       var d = st.route === 'calendar' ? selectedDate() : today();
       openInput({ date: d });
@@ -1471,8 +1584,22 @@ var App = (function () {
     setInputMonths: function (v) { syncInput(); st.input.months = Number(v) || 1; renderInput(); },
     setInputDate: function (v) { st.input.date = v; syncInput(); renderInput(); },
     onAmount: function (el) {
-      var v = el.value.replace(/[^\d]/g, '');
-      el.value = v ? Number(v).toLocaleString('ko-KR') : '';
+      /* 쉼표만 바꾸고 커서 위치는 그대로 (입력 중 화면·커서 튀는 현상 방지) */
+      var raw = el.value.replace(/[^\d]/g, '');
+      var next = raw ? Number(raw).toLocaleString('ko-KR') : '';
+      if (next === el.value) return;
+      var pos = el.selectionStart;
+      var digitsBefore = pos == null ? null : el.value.slice(0, pos).replace(/[^\d]/g, '').length;
+      el.value = next;
+      if (digitsBefore !== null) {
+        var i = 0, c = 0;
+        while (i < next.length && c < digitsBefore) {
+          var ch = next.charAt(i);
+          if (ch >= '0' && ch <= '9') c++;
+          i++;
+        }
+        try { el.setSelectionRange(i, i); } catch (e) { }
+      }
     },
     saveTx: function () {
       syncInput();
@@ -1505,7 +1632,11 @@ var App = (function () {
       openInput({ tx: tx });
     },
     deleteTx: function (id) {
-      if (!confirm('이 기록을 삭제할까요?')) return;
+      var tx = (db.transactions || []).filter(function (x) { return x.id === id; })[0];
+      var msg = tx && isInst(tx)
+        ? '이 할부를 삭제할까요?\n남은 회차(' + CORE.normMonths(tx) + '개월 중 ' + Math.max(0, CORE.normMonths(tx) - CORE.monthDiff(CORE.ymOf(tx.date), CORE.ymOf(today()))) + '회차)도 함께 사라져요.'
+        : '이 기록을 삭제할까요?';
+      if (!confirm(msg)) return;
       db.transactions = db.transactions.filter(function (x) { return x.id !== id; });
       save(); closeModal(); render(); toast('삭제했어요');
     },
@@ -1898,8 +2029,7 @@ var App = (function () {
     if (h === 'input') { if (!st.input) openInput(); return; }
     if (['calendar', 'list', 'budget', 'settings'].indexOf(h) >= 0) {
       if (h !== st.route) { st.route = h; st._scroll = 0; }
-      var mm = document.getElementById('modal');
-      if (mm && !mm.classList.contains('hidden')) { mm.classList.add('hidden'); mm.innerHTML = ''; st.sheet = null; }
+      hideModal();
       render();
     }
   });
