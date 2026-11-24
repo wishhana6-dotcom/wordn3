@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>가계부</title>
 
 <!-- ===== PWA / 홈 화면에 추가 (iOS Safari) ===== -->
@@ -23,19 +23,20 @@
   --r:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;height:100%}
+html,body{margin:0;padding:0;height:100%;touch-action:manipulation;overscroll-behavior-y:contain;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html.modal-open,body.modal-open{overflow:hidden;overscroll-behavior:none}
 body{
   background:#E9EBEF;color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
-button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 #phone{
   position:relative;width:100%;max-width:430px;margin:0 auto;height:100dvh;
   background:var(--bg);display:flex;flex-direction:column;overflow:hidden;
   box-shadow:0 0 60px rgba(20,30,40,.12);
 }
-#scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:18px}
+#scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:18px;overscroll-behavior:contain}
 .hidden{display:none!important}
 
 /* ---------- 공통 ---------- */
@@ -100,7 +101,21 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .cell .dn{font-size:11.5px;font-weight:700;color:#3A4048;width:19px;height:19px;line-height:19px;text-align:center;border-radius:50%;font-style:normal;margin-bottom:1px;flex:0 0 auto}
 .cell.sun .dn{color:#E8656E}.cell.sat .dn{color:#4C8DF0}
 .cell.today .dn{background:var(--mint);color:#fff}
-.cell.sel{background:#EAF7F4}
+.cell.sel{background:#EAF7F4;box-shadow:inset 0 0 0 1.5px rgba(15,185,165,.5)}
+
+/* ---------- 선택 날짜 내역 ---------- */
+.selday{background:#fff;border-radius:18px;margin:10px 0 0;overflow:hidden}
+.sd-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px 0}
+.sd-date{font-size:13.5px;font-weight:800;letter-spacing:-.3px}
+.sd-date .dow{font-size:10.5px;color:#9AA1AA;font-weight:700}
+.sd-add{border:0;background:#F2F4F6;color:#5C646E;border-radius:9px;font-size:11px;font-weight:800;padding:6px 9px;flex:0 0 auto}
+.sd-sum{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 14px 11px;font-size:10.5px;font-weight:700;color:#8B929C;letter-spacing:-.2px}
+.sd-sum span{display:inline-flex;align-items:center;white-space:nowrap}
+.sd-sum i{width:5px;height:5px;border-radius:50%;display:block;margin-right:4px}
+.sd-sum i.d-in{background:var(--inc)}.sd-sum i.d-out{background:var(--ex)}.sd-sum i.d-card{background:#7B3FE4}
+.sd-sum b{font-size:11.5px;font-weight:800;color:#3A4048;margin-left:3px;font-variant-numeric:tabular-nums}
+.selday .items{border-radius:0;border-top:1px solid #F5F6F8}
+.sd-empty{text-align:center;color:var(--sub);font-size:11.5px;font-weight:600;padding:18px 10px;border-top:1px solid #F5F6F8}
 .cell .am{
   font-size:9.5px;line-height:11px;font-weight:700;letter-spacing:-.4px;font-style:normal;
   font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
@@ -176,8 +191,8 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 #tabs #fab{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#16D0B6,#0AA391);color:#fff;font-size:26px;font-weight:400;display:grid;place-items:center;box-shadow:0 6px 16px rgba(10,163,145,.36);margin-bottom:11px;position:relative;top:0;padding:0;border:0;flex:0 0 50px}
 
 /* ---------- 모달 ---------- */
-.modal{position:fixed;inset:0;z-index:100;display:flex}
-.modal .bg{position:absolute;inset:0;background:rgba(16,22,28,.42);animation:fade .18s ease}
+.modal{position:fixed;inset:0;z-index:100;display:flex;overscroll-behavior:contain}
+.modal .bg{position:absolute;inset:0;background:rgba(16,22,28,.42);animation:fade .18s ease;touch-action:none}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .sheet{
   position:relative;margin-top:auto;width:100%;max-width:430px;max-height:94dvh;background:#fff;
@@ -192,7 +207,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 @keyframes zoom{from{transform:scale(.94);opacity:.6}to{transform:scale(1);opacity:1}}
 .sh-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--line);flex:0 0 auto}
 .sh-head .ttl{font-size:15.5px;font-weight:800;letter-spacing:-.4px}
-.sh-body{overflow-y:auto;padding:14px 16px 8px;flex:1}
+.sh-body{overflow-y:auto;padding:14px 16px 8px;flex:1;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .sh-foot{flex:0 0 auto;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:#fff}
 .xbtn{width:28px;height:28px;border-radius:50%;border:0;background:#F2F4F6;color:#6C747E;font-size:15px;display:grid;place-items:center}
 .pill{display:flex;background:#F2F4F6;border-radius:12px;padding:3px;gap:3px}
@@ -208,9 +223,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .field .lb{font-size:11.5px;font-weight:800;color:#6C747E;margin-bottom:6px;letter-spacing:-.2px}
 .line{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F7F8FA;border-radius:12px;padding:11px 12px}
 .line input[type=date],.line input[type=text],.line input[type=number],.line select{
-  border:0;background:transparent;outline:0;font-size:13.5px;font-weight:700;width:100%;-webkit-appearance:none;appearance:none
+  border:0;background:transparent;outline:0;font-size:16px;font-weight:700;width:100%;-webkit-appearance:none;appearance:none
 }
-.line input{outline:0;border:0;background:transparent;font-size:13.5px;font-weight:700}
+.line input{outline:0;border:0;background:transparent;font-size:16px;font-weight:700}
 .line input:focus{outline:0}
 .dateline{position:relative;cursor:pointer}
 .dateline .dlabel{font-size:13.5px;font-weight:700;flex:1}
@@ -267,9 +282,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .switch.on{background:var(--mint)}
 .switch.on i{left:21px}
 .addrow{display:flex;gap:7px;padding:10px 14px 13px}
-.addrow input{flex:1;border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:12.5px;font-weight:700;outline:0}
+.addrow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:16px;font-weight:700;outline:0}
 .addrow input:focus{border-color:var(--mint)}
-.addrow button{border:0;background:var(--mint);color:#fff;border-radius:11px;padding:0 13px;font-size:12.5px;font-weight:800}
+.addrow button{border:0;background:var(--mint);color:#fff;border-radius:11px;padding:0 13px;font-size:12.5px;font-weight:800;flex:0 0 auto;white-space:nowrap}
 
 /* ---------- 토스트 ---------- */
 #toast{
@@ -292,7 +307,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
       <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
       <span>내역</span>
     </button>
-    <div id="fabwrap"><button id="fab" onclick="App.openInput()">+</button></div>
+    <div id="fabwrap"><button id="fab" onclick="App.addForSelected()">+</button></div>
     <button data-tab="budget" onclick="App.goto('budget')">
       <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-6M22 19H2"/></svg>
       <span>예산</span>
@@ -599,6 +614,12 @@ var App = (function () {
   function won(n) { return fmt(n) + '원'; }
   function signed(n) { return (n > 0 ? '+' : n < 0 ? '-' : '') + fmt(Math.abs(n)); }
   function today() { return CORE.todayStr(); }
+  /* 달력에서 지금 보고 있는 날짜 — 선택이 없거나 다른 달이면 오늘(같은 달) 아니면 1일 */
+  function selectedDate() {
+    if (st.selDay && st.selDay.slice(0, 7) === st.ym) return st.selDay;
+    var t = today();
+    return t.slice(0, 7) === st.ym ? t : st.ym + '-01';
+  }
   function num(v) { return Number(String(v == null ? '' : v).replace(/[^\d-]/g, '')) || 0; }
   /* 입력값에서 첫 글자(이모지 1개)만 뽑아낸다 — ZWJ 조합·피부색·변형선택자 포함 */
   function firstIcon(v) {
@@ -841,6 +862,9 @@ var App = (function () {
     /* 달력 */
     html += '<div class="cal">' + calGrid(s) + '</div>';
 
+    /* 선택한 날짜 내역 (달력 바로 아래) */
+    html += selDayPanel(s, selectedDate());
+
     /* 예산 미니 */
     var bud = CORE.findBudgetAt(db, today()) || (db.budgets || [])[0];
     if (bud) {
@@ -908,7 +932,7 @@ var App = (function () {
       if (c.out) cls.push('out');
       var isToday = !c.out && t === st.ym + '-' + CORE.pad2(c.d);
       if (isToday) cls.push('today');
-      if (!c.out && st.selDay === st.ym + '-' + CORE.pad2(c.d)) cls.push('sel');
+      if (!c.out && selectedDate() === st.ym + '-' + CORE.pad2(c.d)) cls.push('sel');
       var info = !c.out ? byDay[c.d] : null;
       h += '<button class="' + cls.join(' ') + '" onclick="App.tapDay(' + (c.out ? 0 : c.d) + ')">' +
         '<i class="dn">' + c.d + '</i>';
@@ -925,6 +949,47 @@ var App = (function () {
       }
       h += '</button>';
     });
+    h += '</div>';
+    return h;
+  }
+
+  /* 선택한 날짜 내역 패널 (달력 바로 아래) */
+  function selDayPanel(s, date) {
+    var items = s.entries.filter(function (e) { return e.date === date; });
+    var inc = 0, cash = 0, card = 0;
+    items.forEach(function (e) {
+      if (e.type === 'income') inc += e.amount;
+      else if (e.method === 'credit') card += e.amount;
+      else cash += e.amount;
+    });
+    var p = date.split('-').map(Number);
+    var dow = ['일', '월', '화', '수', '목', '금', '토'][new Date(p[0], p[1] - 1, p[2]).getDay()];
+
+    var h = '<div class="selday">' +
+      '<div class="sd-head"><div class="sd-date">' + p[1] + '월 ' + p[2] + '일 <span class="dow">(' + dow + ')</span></div>' +
+      '<button class="sd-add" onclick="App.openInput({date:\'' + date + '\'})">+ 내역</button></div>' +
+      '<div class="sd-sum">' +
+      '<span><i class="d-in"></i>수입<b>' + fmt(inc) + '</b></span>' +
+      '<span><i class="d-out"></i>통장<b>' + fmt(cash) + '</b></span>' +
+      '<span><i class="d-card"></i>카드<b>' + fmt(card) + '</b></span>' +
+      '</div>';
+    if (!items.length) {
+      h += '<div class="sd-empty">이 날 기록이 없어요</div>';
+    } else {
+      h += '<div class="items">';
+      items.forEach(function (e) {
+        var nm = e.kind === 'fixed' ? (e.name || '정기') : catName(e.type, e.catId);
+        var tag = '';
+        if (e.kind === 'installment') tag = '<span class="tag inst">' + e.seq + '/' + e.months + '회차</span>';
+        if (e.kind === 'fixed') tag = '<span class="tag fix">정기</span>';
+        h += '<button class="item" onclick="App.openEntry(\'' + e.kind + '\',\'' + (e.txId || e.subId || '') + '\')">' +
+          '<span class="ic">' + catEmoji(e.type, e.catId) + '</span>' +
+          '<span class="mid"><span class="nm">' + esc(nm) + tag + '</span>' +
+          '<span class="meta">' + esc(methodLabel(e)) + (e.memo ? ' · ' + esc(e.memo) : '') + '</span></span>' +
+          '<span class="amt ' + (e.type === 'income' ? 'inc' : '') + '">' + (e.type === 'income' ? '+' : '-') + fmt(e.amount) + '</span></button>';
+      });
+      h += '</div>';
+    }
     h += '</div>';
     return h;
   }
@@ -1126,7 +1191,7 @@ var App = (function () {
       '<div class="srow"><div class="txt"><div class="t1">이월 잔액 포함</div></div>' +
       '<button class="switch ' + (db.settings.carryOver !== false ? 'on' : '') + '" onclick="App.toggleCarry()"><i></i></button></div>' +
       '<div class="srow"><div class="txt"><div class="t1">시작 잔액</div><div class="t2">' + (db.settings.startMonth || '-') + ' 기준 잔액</div></div>' +
-      '<input id="startBal" value="' + fmt(db.settings.startBalance || 0) + '" inputmode="numeric" style="width:104px;text-align:right;border:1px solid #EDEFF2;border-radius:9px;padding:6px 8px;font-size:12px;font-weight:800" onblur="App.saveStartBalance(this)">' +
+      '<input id="startBal" value="' + fmt(db.settings.startBalance || 0) + '" inputmode="numeric" style="width:116px;text-align:right;border:1px solid #EDEFF2;border-radius:9px;padding:6px 8px;font-size:16px;font-weight:800" onblur="App.saveStartBalance(this)">' +
       '</div></div>';
 
     /* 계산 기준 */
@@ -1309,13 +1374,21 @@ var App = (function () {
   /* ---------------- 모달 ---------------- */
   function showModal(html, isDialog) {
     var m = document.getElementById('modal');
+    var prevBody = m.querySelector('.sh-body');
+    var prevTop = prevBody ? prevBody.scrollTop : 0;
     m.innerHTML = '<div class="bg" onclick="App.closeModal()"></div>' + html;
     m.classList.remove('hidden');
+    var nextBody = m.querySelector('.sh-body');
+    if (nextBody && prevBody) nextBody.scrollTop = prevTop;
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
   }
   function closeModal() {
     var m = document.getElementById('modal');
     m.classList.add('hidden');
     m.innerHTML = '';
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
     st.sheet = null;
     if (location.hash === '#input') history.replaceState(null, '', '#' + st.route);
   }
@@ -1335,7 +1408,11 @@ var App = (function () {
       st.route = route;
       if (route !== 'budget') st.budgetId = null;
       var m = document.getElementById('modal');
-      if (m && !m.classList.contains('hidden')) { m.classList.add('hidden'); m.innerHTML = ''; st.sheet = null; }
+      if (m && !m.classList.contains('hidden')) {
+        m.classList.add('hidden'); m.innerHTML = ''; st.sheet = null;
+        document.documentElement.classList.remove('modal-open');
+        document.body.classList.remove('modal-open');
+      }
       render();
       if (location.hash !== '#' + route) history.replaceState(null, '', '#' + route);
       document.getElementById('scr').scrollTop = 0;
@@ -1355,29 +1432,9 @@ var App = (function () {
     setFilter: function (k) { st.listFilter = k; render(); },
     tapDay: function (d) {
       if (!d) return;
-      var date = st.ym + '-' + CORE.pad2(d);
-      st.selDay = st.selDay === date ? '' : date;
-      var s = CORE.monthFull(db, st.ym);
-      var items = s.entries.filter(function (e) { return e.date === date; });
-      var h = '<div class="sheet" style="max-height:80dvh"><div class="sh-head">' +
-        '<div class="ttl">' + Number(date.slice(5, 7)) + '월 ' + Number(date.slice(8)) + '일</div>' +
-        '<button class="xbtn" onclick="App.closeModal()">✕</button></div><div class="sh-body">';
-      if (!items.length) {
-        h += '<div class="empty" style="padding:20px">기록이 없어요</div>';
-      } else {
-        h += '<div class="items">';
-        items.forEach(function (e) {
-          h += '<button class="item" onclick="App.openEntry(\'' + e.kind + '\',\'' + (e.txId || e.subId || '') + '\')">' +
-            '<span class="ic">' + catEmoji(e.type, e.catId) + '</span>' +
-            '<span class="mid"><span class="nm">' + esc(e.kind === 'fixed' ? e.name : catName(e.type, e.catId)) +
-            (e.kind === 'installment' ? '<span class="tag inst">' + e.seq + '/' + e.months + '회차</span>' : '') + '</span>' +
-            '<span class="meta">' + methodLabel(e) + (e.memo ? ' · ' + esc(e.memo) : '') + '</span></span>' +
-            '<span class="amt ' + (e.type === 'income' ? 'inc' : '') + '">' + fmt(e.amount) + '</span></button>';
-        });
-        h += '</div>';
-      }
-      h += '</div><div class="sh-foot"><button class="btn" onclick="App.openInput({date:\'' + date + '\'})">이 날 기록 추가</button></div></div>';
-      showModal(h);
+      st.selDay = st.ym + '-' + CORE.pad2(d);
+      st._scroll = document.getElementById('scr').scrollTop;
+      render();
     },
     pickBudget: function (id) { st.budgetId = id; render(); },
     setBudgetBasis: function (b) {
@@ -1392,6 +1449,10 @@ var App = (function () {
 
     /* 입력 */
     openInput: openInput,
+    addForSelected: function () {
+      var d = st.route === 'calendar' ? selectedDate() : today();
+      openInput({ date: d });
+    },
     setInputType: function (t) {
       syncInput();
       st.input.type = t;
@@ -1432,6 +1493,7 @@ var App = (function () {
       if (idx >= 0) db.transactions[idx] = tx; else db.transactions.push(tx);
       save();
       st.ym = CORE.ymOf(tx.date);
+      st.selDay = tx.date;
       closeModal();
       render();
       toast(idx >= 0 ? '수정했어요' : '저장했어요');
