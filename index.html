@@ -457,7 +457,11 @@ var CORE = (function () {
       if (n === 1 && ymOf(tx.date) === ym) {
         d = parts(tx.date).d;
       } else {
-        d = clampDay(y, m, parts(tx.date).d);
+        /* 회차별 실제 결제일이 다르면 그 날짜를 그대로 쓴다(없으면 결제일 기준) */
+        var seqIdx = monthDiff(ymOf(tx.date), ym);
+        var dayList = (tx.installment && tx.installment.days) || null;
+        var dayWant = dayList && dayList[seqIdx] ? Number(dayList[seqIdx]) : parts(tx.date).d;
+        d = clampDay(y, m, dayWant);
       }
       out.push({
         date: ymd(y, m, d), type: tx.type || 'expense', amount: amount,
@@ -1323,6 +1327,8 @@ var App = (function () {
         type: tx.type, amount: String(tx.amount), date: tx.date, catId: tx.catId,
         method: tx.method, cardId: tx.cardId, memo: tx.memo || '',
         months: tx.installment && tx.installment.months ? tx.installment.months : 1,
+        instDays: (tx.installment && tx.installment.days) || null,
+        origMonths: tx.installment && tx.installment.months ? tx.installment.months : 1,
         editId: tx.id
       };
     }
@@ -1614,7 +1620,11 @@ var App = (function () {
         cardId: f.type === 'expense' && f.method === 'credit' ? f.cardId : null,
         memo: f.memo || ''
       };
-      if (f.type === 'expense' && f.months > 1) tx.installment = { months: f.months };
+      if (f.type === 'expense' && f.months > 1) {
+        tx.installment = { months: f.months };
+        /* 회차별 실제 결제일은 개월 수를 그대로 둔 경우에만 유지 */
+        if (f.instDays && f.origMonths === f.months) tx.installment.days = f.instDays;
+      }
       var idx = -1;
       db.transactions.forEach(function (x, i) { if (x.id === tx.id) idx = i; });
       if (idx >= 0) db.transactions[idx] = tx; else db.transactions.push(tx);
