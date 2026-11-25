@@ -83,6 +83,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .bal .t{font-size:11.5px;font-weight:700;opacity:.85;letter-spacing:-.1px}
 .bal .v{font-size:27px;font-weight:800;letter-spacing:-1px;margin:2px 0 10px;line-height:1.15}
 .bal .v small{font-size:15px;font-weight:700;margin-left:2px;opacity:.9}
+.bal .bsub{font-size:10.5px;font-weight:700;opacity:.8;letter-spacing:-.1px;margin:-6px 0 9px}
 .bal .r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid var(--accent-line);padding-top:9px}
 .bal .r>div{display:flex;flex-direction:column;gap:2px}
 .bal .r span{font-size:10.5px;opacity:.8;font-weight:600}
@@ -388,6 +389,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .tprev .bal .v{font-size:21px;margin:1px 0 8px}
 .tprev .bal .r{padding-top:7px}
 .tprev .bal .r span{font-size:9.5px}
+.tprev .bal .bsub{font-size:9.5px;margin:-4px 0 7px}
 .tprev .bal .r b{font-size:11px}
 .tprev-rows{margin-top:8px;background:#fff;border-radius:12px;overflow:hidden}
 .tprev-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #F5F6F8;font-size:12px;font-weight:700}
@@ -593,6 +595,20 @@ var CORE = (function () {
     if (sub.day === 'end' || sub.day === -1 || sub.day === 'last') return dim;
     return clampDay(y, m, Number(sub.day));
   }
+  /* ---- 다음 달에 통장에서 빠져나갈 정기 지출 합계 ----
+     달력 상단 잔액 카드에서 '미리 빼 둘 돈'으로 보여 주기 위한 값만 계산한다.
+     통장 출금분(계좌·체크)만 넣고, 신용카드로 긁는 구독은 다음 달 대금으로 나가므로 빼지 않는다. */
+  function subReserveNext(db, ym) {
+    var nextYm = ymAdd(ym, 1), total = 0;
+    ((db && db.subscriptions) || []).forEach(function (sub) {
+      if (!sub) return;
+      if ((sub.type || 'expense') !== 'expense') return;
+      if ((sub.method || 'account') === 'credit') return;
+      if (!subActiveIn(sub, nextYm)) return;
+      total += Math.round(Number(sub.amount) || 0);
+    });
+    return total;
+  }
 
   /* ---- 한 달(1일~말일) 항목 전개 ---- */
   function entriesForMonth(db, ym) {
@@ -720,8 +736,13 @@ var CORE = (function () {
     var s = monthSummary(db, ym);
     var carryIn = carryInFor(db, ym);
     s.carryIn = carryIn;
-    s.balance = carryIn + s.cashNet;       /* 통장 잔액 */
+    s.balance = carryIn + s.cashNet;       /* 통장 잔액 — 이월은 이 값 기준으로 넘어간다 */
     s.balanceAll = carryIn + s.net;        /* 참고: 카드 사용까지 포함한 잔액 */
+    /* 화면 표시용 — 다음 달 정기 구독(통장 출금분)을 미리 뺀 '사용 가능 잔액'.
+       이월 계산(carryInFor)·통장 잔액(balance)은 건드리지 않는다(이중 차감 방지). */
+    s.nextSubReserve = subReserveNext(db, ym);
+    s.subReserveOn = ((db && db.settings) || {}).subReserve !== false;
+    s.usableBalance = s.balance - s.nextSubReserve;
     return s;
   }
 
@@ -1005,7 +1026,7 @@ var CORE = (function () {
     clampDay: clampDay, ymAdd: ymAdd, monthDiff: monthDiff, cmpYm: cmpYm, dayDiff: dayDiff,
     todayStr: todayStr, normMonths: normMonths, installmentParts: installmentParts,
     txAmountInMonth: txAmountInMonth, installmentInfo: installmentInfo,
-    subActiveIn: subActiveIn, subDayIn: subDayIn,
+    subActiveIn: subActiveIn, subDayIn: subDayIn, subReserveNext: subReserveNext,
     entriesForMonth: entriesForMonth, monthSummary: monthSummary, carryInFor: carryInFor,
     monthFull: monthFull, sumExpenseInRange: sumExpenseInRange, budgetStats: budgetStats,
     isCardBillCat: isCardBillCat, isSavingCat: isSavingCat, isCardBill: isCardBill, isSaving: isSaving,
@@ -1199,6 +1220,7 @@ var App = (function () {
   function normalize(d) {
     d.settings = d.settings || {};
     if (d.settings.carryOver === undefined) d.settings.carryOver = true;
+    if (d.settings.subReserve === undefined) d.settings.subReserve = true;
     /* 색상 테마 — 저장된 값 중 쓸 수 있는 것만 남김 (백업 가져오기·옛 데이터 포함) */
     var colors = {}, hasColor = false;
     if (d.settings.colors && typeof d.settings.colors === 'object') {
@@ -1314,7 +1336,7 @@ var App = (function () {
 
     var data = {
       version: 1,
-      settings: { carryOver: true, startBalance: 350000, startMonth: prevYm },
+      settings: { carryOver: true, subReserve: true, startBalance: 350000, startMonth: prevYm },
       cards: cards,
       categories: { expense: exp, income: inc },
       transactions: transactions,
@@ -1325,7 +1347,7 @@ var App = (function () {
   }
 
   function reset(keepSettings) {
-    db = { version: 1, settings: { carryOver: true, startBalance: 0, startMonth: CORE.ymOf(today()) }, cards: [], categories: { expense: [{ id: 'e1', name: '기타', emoji: '•' }], income: [{ id: 'i1', name: '기타수입', emoji: '•' }] }, transactions: [], subscriptions: [], budgets: [] };
+    db = { version: 1, settings: { carryOver: true, subReserve: true, startBalance: 0, startMonth: CORE.ymOf(today()) }, cards: [], categories: { expense: [{ id: 'e1', name: '기타', emoji: '•' }], income: [{ id: 'i1', name: '기타수입', emoji: '•' }] }, transactions: [], subscriptions: [], budgets: [] };
     save();
     render(); toast('깔끔하게 비웠어요');
   }
@@ -1409,6 +1431,19 @@ var App = (function () {
   }
 
   /* ① 달력 ================================================= */
+  /* 잔액 카드 — 다음 달 정기구독(통장 출금분)을 미리 뺀 '사용 가능 잔액'을 기본으로 보여 준다.
+     설정에서 끄면 예전처럼 이번 달 통장 잔액을 그대로 보여 준다. */
+  function balTitle(s, ym) {
+    var spare = s.subReserveOn !== false;
+    var n = Number(String(ym).slice(5, 7));
+    return n + '월 ' + (spare ? '사용 가능 잔액' : '통장 잔액') +
+      (!spare && (db.settings || {}).carryOver ? ' (이월 포함)' : '');
+  }
+  function balShown(s) { return s.subReserveOn !== false ? s.usableBalance : s.balance; }
+  function balNoteHtml(s) {
+    if (s.subReserveOn === false || !(s.nextSubReserve > 0)) return '';
+    return '<div class="bsub">다음 달 구독 -' + fmt(s.nextSubReserve) + '원 · 통장 ' + fmt(s.balance) + '원</div>';
+  }
   function viewCalendar() {
     var s = CORE.monthFull(db, st.ym);
     var cardRows = (db.cards || []).map(function (c) {
@@ -1421,10 +1456,11 @@ var App = (function () {
     var html = headMonth();
     html += '<div class="wrap">';
 
-    /* 통장 잔액 카드 (현금 흐름 기준) */
+    /* 통장 잔액 카드 (현금 흐름 기준 · 다음 달 구독 미리 빼기) */
     html += '<div class="bal">' +
-      '<div class="t">' + (Number(st.ym.slice(5)) ) + '월 통장 잔액' + (db.settings.carryOver ? ' (이월 포함)' : '') + '</div>' +
-      '<div class="v">' + fmt(s.balance) + '<small>원</small></div>' +
+      '<div class="t">' + balTitle(s, st.ym) + '</div>' +
+      '<div class="v">' + fmt(balShown(s)) + '<small>원</small></div>' +
+      balNoteHtml(s) +
       '<div class="r">' +
       '  <div><span>수입</span><b>' + fmt(s.income) + '</b></div>' +
       '  <div><span>통장 지출</span><b>' + fmt(s.cashOut) + '</b></div>' +
@@ -1820,8 +1856,9 @@ var App = (function () {
     var s = CORE.monthFull(db, ym);
     return '<div class="tprev">' +
       '<div class="bal">' +
-      '  <div class="t">' + Number(ym.slice(5)) + '월 통장 잔액' + (db.settings.carryOver !== false ? ' (이월 포함)' : '') + '</div>' +
-      '  <div class="v">' + fmt(s.balance) + '<small>원</small></div>' +
+      '  <div class="t">' + balTitle(s, ym) + '</div>' +
+      '  <div class="v">' + fmt(balShown(s)) + '<small>원</small></div>' +
+      balNoteHtml(s) +
       '  <div class="r"><div><span>수입</span><b>' + fmt(s.income) + '</b></div>' +
       '    <div><span>통장 지출</span><b>' + fmt(s.cashOut) + '</b></div>' +
       '    <div><span>전월 이월</span><b>' + fmt(s.carryIn) + '</b></div></div>' +
@@ -1957,6 +1994,8 @@ var App = (function () {
     h += '<div class="slist">' +
       '<div class="srow"><div class="txt"><div class="t1">이월 잔액 포함</div></div>' +
       '<button class="switch ' + (db.settings.carryOver !== false ? 'on' : '') + '" onclick="App.toggleCarry()"><i></i></button></div>' +
+      '<div class="srow"><div class="txt"><div class="t1">다음 달 정기구독 미리 빼기</div><div class="t2">잔액 카드에 다음 달 구독료를 뺀 금액을 보여줘요</div></div>' +
+      '<button class="switch ' + (db.settings.subReserve !== false ? 'on' : '') + '" onclick="App.toggleSubReserve()"><i></i></button></div>' +
       '<div class="srow"><div class="txt"><div class="t1">시작 잔액</div><div class="t2">' + (db.settings.startMonth || '-') + ' 기준 잔액</div></div>' +
       '<input id="startBal" value="' + fmt(db.settings.startBalance || 0) + '" inputmode="numeric" style="width:116px;text-align:right;border:1px solid #EDEFF2;border-radius:9px;padding:6px 8px;font-size:16px;font-weight:800" onblur="App.saveStartBalance(this)">' +
       '</div></div>';
@@ -2853,6 +2892,13 @@ var App = (function () {
     toggleCarry: function () {
       db.settings.carryOver = db.settings.carryOver === false;
       save(); render(); toast(db.settings.carryOver ? '이월 잔액을 포함할게요' : '이월 잔액을 빼고 볼게요');
+    },
+    toggleSubReserve: function () {
+      db.settings.subReserve = db.settings.subReserve === false;
+      save(); render();
+      toast(db.settings.subReserve === false
+        ? '다음 달 구독은 빼지 않은 잔액으로 보여줄게요'
+        : '다음 달 구독을 미리 뺀 잔액으로 보여줄게요');
     },
     saveStartBalance: function (el) {
       db.settings.startBalance = num(el.value);
