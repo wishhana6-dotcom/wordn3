@@ -90,6 +90,10 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .bal .r b{font-size:12.5px;font-weight:800;letter-spacing:-.2px}
 
 /* ---------- 카드 사용액 ---------- */
+/* 신용카드 사용액 요약(헤더 바로 아래) — 카드대금 상쇄 후 더 낼 금액 */
+.cbsum{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 4px 8px;font-size:11px;font-weight:700;color:#8B929C;letter-spacing:-.1px}
+.cbsum em{font-style:normal;color:#C9CED6}
+.cbsum b{font-size:11.5px;font-weight:800;color:var(--card-ink)}
 .cardstrip{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .cardstrip::-webkit-scrollbar{display:none}
 .ctile{flex:1 0 0;min-width:100px;background:#fff;border-radius:14px;padding:10px 11px 9px}
@@ -746,6 +750,20 @@ var CORE = (function () {
     return s;
   }
 
+  /* ---- 신용카드 사용액 대비 '더 낼 카드대금' ----
+     이번 달 카드 사용액에서 이번 달에 낸 카드대금(isCardBill 지출 합계)을 뺀 나머지.
+     mode: 'none'(이번 달 카드대금 납부 없음) · 'offset'(사용분 안에서 상계) · 'over'(낸 대금이 이번 달 사용분보다 큼)
+     s를 주면 이미 구한 monthFull 결과를 그대로 쓴다. */
+  function cardBillSummary(db, ym, s) {
+    s = s || monthFull(db, ym);
+    var used = Math.max(0, Math.round(Number(s.cardOut) || 0));
+    var paid = Math.max(0, Math.round(Number(s.excludedBill) || 0));
+    return {
+      used: used, paid: paid, remain: Math.max(0, used - paid),
+      mode: paid <= 0 ? 'none' : (used >= paid ? 'offset' : 'over')
+    };
+  }
+
   /* ---- 예산에서 빼는 지출 판별 ----
      '카드대금'과 '저축' 항목(또는 플래그)으로 적은 지출은 예산 사용액에서 빼고 계산한다.
      통계(총 지출·카테고리)·통장 잔액 계산에는 그대로 들어간다. */
@@ -1029,6 +1047,7 @@ var CORE = (function () {
     subActiveIn: subActiveIn, subDayIn: subDayIn, subReserveNext: subReserveNext,
     entriesForMonth: entriesForMonth, monthSummary: monthSummary, carryInFor: carryInFor,
     monthFull: monthFull, sumExpenseInRange: sumExpenseInRange, budgetStats: budgetStats,
+    cardBillSummary: cardBillSummary,
     isCardBillCat: isCardBillCat, isSavingCat: isSavingCat, isCardBill: isCardBill, isSaving: isSaving,
     isBudgetExcluded: isBudgetExcluded, excludeKind: excludeKind, calcEval: calcEval,
     findBudgetAt: findBudgetAt, startYmOf: startYmOf,
@@ -1444,6 +1463,20 @@ var App = (function () {
     if (s.subReserveOn === false || !(s.nextSubReserve > 0)) return '';
     return '<div class="bsub">다음 달 구독 -' + fmt(s.nextSubReserve) + '원 · 통장 ' + fmt(s.balance) + '원</div>';
   }
+  /* 신용카드 사용액 헤더 아래 한 줄 — 이번 달 카드대금으로 상쇄한 만큼을 빼고 더 낼 금액 */
+  function cardBillLine(s) {
+    var c = CORE.cardBillSummary(db, st.ym, s);
+    if (!c.used && !c.paid) return '';
+    if (c.mode === 'offset') {
+      return '<div class="cbsum"><span>카드대금 상쇄 ' + won(c.paid) + '</span><em>·</em>' +
+        '<b>더 낼 금액 ' + won(c.remain) + '</b></div>';
+    }
+    if (c.mode === 'over') {
+      return '<div class="cbsum"><span>카드대금 납부 ' + won(c.paid) + '</span><em>·</em>' +
+        '<b>이달 사용분 대비 더 낼 금액 ' + won(c.remain) + '</b></div>';
+    }
+    return '<div class="cbsum"><b>더 낼 카드대금 ' + won(c.remain) + '</b></div>';
+  }
   function viewCalendar() {
     var s = CORE.monthFull(db, st.ym);
     var cardRows = (db.cards || []).map(function (c) {
@@ -1472,6 +1505,7 @@ var App = (function () {
     html += '<div class="sect-h"><b>신용카드 사용액</b><span class="l">' +
       Number(st.ym.slice(5)) + '/1 ~ ' + Number(st.ym.slice(5)) + '/' + CORE.daysInMonth(Number(st.ym.slice(0, 4)), Number(st.ym.slice(5))) +
       ' 합계 ' + won(cardTotal) + '</span></div>';
+    html += cardBillLine(s);
     html += '<div class="cardstrip">';
     if (!cardRows.length) {
       html += '<div class="ctile empty" onclick="App.goto(\'settings\')">설정에서 신용카드를<br>추가해 보세요</div>';
