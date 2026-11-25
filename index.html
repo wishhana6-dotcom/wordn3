@@ -17,9 +17,22 @@
 <style>
 :root{
   --bg:#F4F5F7; --card:#FFFFFF; --ink:#1A1D21; --sub:#8B929C; --line:#EDEFF2;
-  --mint:#0FB9A5; --mint-d:#0AA391; --mint-soft:#E7F7F4;
-  --ex:#F2545B; --ex-soft:#FDEDEE; --inc:#2E8BF0; --inc-soft:#EAF2FE;
-  --violet:#7C6CF5;
+
+  /* ── 색상 테마 ─────────────────────────────────────────────
+     설정 → 색상 테마에서 고른 색을 JS가 이 변수들에 덮어써요.
+     --accent(메인) / --income-color(수입) / --bank-color(통장 지출) / --card-color(신용카드)   */
+  --accent:#0FB9A5; --accent-l:#28C4B0; --accent-d:#0C9887;
+  --accent-soft:#E7F7F4; --accent-ink:#0A8A7A; --accent-on:#FFFFFF;
+  --accent-ring:rgba(15,185,165,.5); --accent-shadow:rgba(12,152,135,.28); --accent-line:rgba(255,255,255,.22);
+  --income-color:#2E8BF0; --income-d:#2570C0; --income-soft:#EAF2FE; --income-ink:#2E8BF0;
+  --bank-color:#F2545B; --bank-d:#C24349; --bank-soft:#FDEDEE; --bank-ink:#F2545B;
+  --card-color:#7B3FE4; --card-d:#6232B6; --card-soft:#F0EDFF; --card-ink:#7B3FE4;
+
+  /* 예전 변수 이름 — 기존 규칙이 그대로 테마를 따라가도록 이어 둠 */
+  --mint:var(--accent); --mint-d:var(--accent-d); --mint-soft:var(--accent-soft);
+  --ex:var(--bank-ink); --ex-soft:var(--bank-soft);
+  --inc:var(--income-ink); --inc-soft:var(--income-soft);
+  --violet:var(--card-ink);
   --r:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -61,14 +74,14 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 
 /* ---------- 잔액 카드 ---------- */
 .bal{
-  border-radius:20px;padding:15px 16px 13px;color:#fff;
-  background:linear-gradient(135deg,#14CBB1 0%,#0AA391 100%);
-  box-shadow:0 8px 22px rgba(10,163,145,.24);
+  border-radius:20px;padding:15px 16px 13px;color:var(--accent-on);
+  background:linear-gradient(135deg,var(--accent-l) 0%,var(--accent-d) 100%);
+  box-shadow:0 8px 22px var(--accent-shadow);
 }
 .bal .t{font-size:11.5px;font-weight:700;opacity:.85;letter-spacing:-.1px}
 .bal .v{font-size:27px;font-weight:800;letter-spacing:-1px;margin:2px 0 10px;line-height:1.15}
 .bal .v small{font-size:15px;font-weight:700;margin-left:2px;opacity:.9}
-.bal .r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid rgba(255,255,255,.22);padding-top:9px}
+.bal .r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid var(--accent-line);padding-top:9px}
 .bal .r>div{display:flex;flex-direction:column;gap:2px}
 .bal .r span{font-size:10.5px;opacity:.8;font-weight:600}
 .bal .r b{font-size:12.5px;font-weight:800;letter-spacing:-.2px}
@@ -92,7 +105,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .calleg{display:flex;justify-content:flex-end;align-items:center;gap:9px;padding:1px 3px 2px;font-size:9.5px;font-weight:700;color:#9AA1AA;letter-spacing:-.2px}
 .calleg span{display:inline-flex;align-items:center;gap:3px}
 .calleg i{width:5px;height:5px;border-radius:50%;display:block}
-.calleg i.i{background:var(--inc)}.calleg i.c{background:var(--ex)}.calleg i.v{background:#7B3FE4}
+.calleg i.i{background:var(--income-color)}.calleg i.c{background:var(--bank-color)}.calleg i.v{background:var(--card-color)}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
 .cell{
   height:60px;border:0;background:transparent;border-radius:11px;padding:3px 0 2px;
@@ -100,8 +113,8 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 }
 .cell .dn{font-size:11.5px;font-weight:700;color:#3A4048;width:19px;height:19px;line-height:19px;text-align:center;border-radius:50%;font-style:normal;margin-bottom:1px;flex:0 0 auto}
 .cell.sun .dn{color:#E8656E}.cell.sat .dn{color:#4C8DF0}
-.cell.today .dn{background:var(--mint);color:#fff}
-.cell.sel{background:#EAF7F4;box-shadow:inset 0 0 0 1.5px rgba(15,185,165,.5)}
+.cell.today .dn{background:var(--accent);color:var(--accent-on)}
+.cell.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent-ring)}
 
 /* ---------- 선택 날짜 내역 ---------- */
 .selday{background:#fff;border-radius:18px;margin:10px 0 0;overflow:hidden}
@@ -117,9 +130,9 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .sd-sum{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 14px 11px;font-size:10.5px;font-weight:700;color:#8B929C;letter-spacing:-.2px}
 .sd-sum span{display:inline-flex;align-items:center;white-space:nowrap}
 .sd-sum i{width:5px;height:5px;border-radius:50%;display:block;margin-right:4px}
-.sd-sum i.d-in{background:var(--inc)}.sd-sum i.d-out{background:var(--ex)}.sd-sum i.d-card{background:#7B3FE4}
+.sd-sum i.d-in{background:var(--income-color)}.sd-sum i.d-out{background:var(--bank-color)}.sd-sum i.d-card{background:var(--card-color)}
 .sd-sum b{font-size:11.5px;font-weight:800;color:#3A4048;margin-left:3px;font-variant-numeric:tabular-nums}
-.sd-sum b.inc{color:var(--inc)}.sd-sum b.ex{color:var(--ex)}.sd-sum b.vio{color:#7B3FE4}
+.sd-sum b.inc{color:var(--income-ink)}.sd-sum b.ex{color:var(--bank-ink)}.sd-sum b.vio{color:var(--card-ink)}
 .selday .items{border-radius:0;border-top:1px solid #F5F6F8}
 .sd-empty{text-align:center;color:var(--sub);font-size:11.5px;font-weight:600;padding:18px 10px;border-top:1px solid #F5F6F8}
 .cell .am{
@@ -130,7 +143,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .cell .am.long{font-size:8.8px;letter-spacing:-.5px}
 .cell .am.i{color:var(--inc)}
 .cell .am.c{color:var(--ex)}
-.cell .am.v{color:#7B3FE4}
+.cell .am.v{color:var(--card-ink)}
 .cell.out{opacity:.32}
 .cell .fx{font-size:8px;color:var(--violet);line-height:8px}
 
@@ -140,9 +153,9 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .bmini .nm{font-size:12.5px;font-weight:800;letter-spacing:-.2px}
 .bmini .pr{font-size:11px;color:var(--sub);font-weight:600}
 .bar{height:8px;border-radius:6px;background:#EEF1F4;overflow:hidden;margin:9px 0 7px}
-.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#16D0B6,#0AA391);transition:width .3s}
+.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent-l),var(--accent-d));transition:width .3s}
 .bar i.warn{background:linear-gradient(90deg,#FFB020,#F5893A)}
-.bar i.over{background:linear-gradient(90deg,#FF7A7F,#F2545B)}
+.bar i.over{background:linear-gradient(90deg,var(--bank-color),var(--bank-d))}
 .bmini .bot{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700}
 .bmini .bot .k{color:var(--sub);font-weight:600;margin-right:4px}
 
@@ -160,10 +173,10 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:12px 14px 2px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:#666E78;font-size:11.5px;font-weight:700;padding:7px 11px;border-radius:999px}
-.chip.on{background:#0FB9A5;border-color:#0FB9A5;color:#fff}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
 .daily{background:var(--mint-soft);border-radius:14px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;margin-top:10px}
-.daily .k{font-size:11.5px;font-weight:700;color:#0A8A7A}
-.daily b{font-size:17px;font-weight:800;letter-spacing:-.4px;color:#0A8A7A}
+.daily .k{font-size:11.5px;font-weight:700;color:var(--accent-ink)}
+.daily b{font-size:17px;font-weight:800;letter-spacing:-.4px;color:var(--accent-ink)}
 
 /* ---------- 내역 목록 ---------- */
 .daygroup{margin:12px 0 0}
@@ -180,10 +193,10 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .item .amt{font-size:13.5px;font-weight:800;letter-spacing:-.4px;text-align:right;flex:0 0 auto}
 .item .amt.inc{color:var(--inc)}
 .item .amt.ex{color:var(--ex)}
-.item .amt.vio{color:#7B3FE4}
+.item .amt.vio{color:var(--card-ink)}
 .tag{display:inline-block;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:5px;margin-left:4px;vertical-align:1px}
-.tag.inst{background:#F0EDFF;color:#6A57E8}
-.tag.fix{background:var(--mint-soft);color:#0A8A7A}
+.tag.inst{background:var(--card-soft);color:var(--card-ink)}
+.tag.fix{background:var(--accent-soft);color:var(--accent-ink)}
 .empty{text-align:center;color:var(--sub);font-size:12.5px;font-weight:600;padding:34px 10px}
 
 /* ---------- 통계 ---------- */
@@ -237,7 +250,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 #tabs #fab:active{transform:scale(.94)}
 #tabs button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 #fabwrap{flex:0 0 66px;display:flex;justify-content:center}
-#tabs #fab{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#16D0B6,#0AA391);color:#fff;font-size:26px;font-weight:400;display:grid;place-items:center;box-shadow:0 6px 16px rgba(10,163,145,.36);margin-bottom:11px;position:relative;top:0;padding:0;border:0;flex:0 0 50px}
+#tabs #fab{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--accent-l),var(--accent-d));color:var(--accent-on);font-size:26px;font-weight:400;display:grid;place-items:center;box-shadow:0 6px 16px var(--accent-shadow);margin-bottom:11px;position:relative;top:0;padding:0;border:0;flex:0 0 50px}
 
 /* ---------- 모달 ---------- */
 .modal{position:fixed;inset:0;z-index:100;display:flex;overscroll-behavior:contain}
@@ -275,7 +288,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
   display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent;
 }
 .calcbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.calcbtn.on{background:var(--mint-soft);color:#0A8A7A;box-shadow:inset 0 0 0 1px rgba(15,185,165,.45)}
+.calcbtn.on{background:var(--accent-soft);color:var(--accent-ink);box-shadow:inset 0 0 0 1px var(--accent-ring)}
 .calcpanel{margin-top:9px;background:#F7F8FA;border-radius:14px;padding:9px 9px 8px;animation:calcIn .16s ease}
 @keyframes calcIn{from{opacity:.4;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .calcline{padding:1px 4px 7px;min-height:32px;display:flex;flex-direction:column;gap:1px}
@@ -288,10 +301,10 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
   display:grid;place-items:center;padding:0;box-shadow:0 1px 2px rgba(20,30,40,.05);-webkit-tap-highlight-color:transparent;
 }
 .calcgrid button:active{transform:scale(.96);background:#EEF1F4}
-.calcgrid button.op{color:#0A8A7A;background:#EAF7F4;font-size:17px}
+.calcgrid button.op{color:var(--accent-ink);background:var(--accent-soft);font-size:17px}
 .calcgrid button.fn{color:#6C747E;background:#EFF2F5;font-size:13px}
-.calcgrid button.eq{grid-row:span 2;background:var(--mint);color:#fff;font-size:18px;box-shadow:0 2px 6px rgba(10,163,145,.28)}
-.calcgrid button.eq:active{background:var(--mint-d)}
+.calcgrid button.eq{grid-row:span 2;background:var(--accent);color:var(--accent-on);font-size:18px;box-shadow:0 2px 6px var(--accent-shadow)}
+.calcgrid button.eq:active{background:var(--accent-d)}
 .field{margin-top:11px}
 .field .lb{font-size:11.5px;font-weight:800;color:#6C747E;margin-bottom:6px;letter-spacing:-.2px}
 .line{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F7F8FA;border-radius:12px;padding:11px 12px}
@@ -308,21 +321,21 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .catgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .cat{border:1px solid var(--line);background:#fff;border-radius:13px;padding:7px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:700;color:#5C646E}
 .cat span{font-size:17px;line-height:19px}
-.cat.on{border-color:var(--mint);background:var(--mint-soft);color:#0A8A7A}
+.cat.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
 .catsc{display:flex;gap:6px;overflow-x:auto;padding:1px 0 2px;scrollbar-width:none}
 .catsc::-webkit-scrollbar{display:none}
 .catsc .cat{flex:0 0 auto;flex-direction:row;gap:5px;padding:8px 11px;border-radius:999px;font-size:11.5px;white-space:nowrap}
 .catsc .cat span{font-size:14px;line-height:16px}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 0;font-size:12px;font-weight:700;color:#6C747E}
-.seg button.on{border-color:var(--mint);background:var(--mint-soft);color:#0A8A7A}
+.seg button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
 .cardchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
 .cardchips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 11px;font-size:11.5px;font-weight:700;color:#5C646E;display:flex;align-items:center;gap:5px}
 .cardchips button i{width:7px;height:7px;border-radius:50%;display:block}
-.cardchips button.on{border-color:var(--mint);background:var(--mint-soft);color:#0A8A7A}
+.cardchips button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
 .hint{font-size:10.5px;color:var(--sub);font-weight:600;margin-top:6px;line-height:1.45}
-.btn{border:0;border-radius:14px;padding:14px 0;width:100%;font-size:14.5px;font-weight:800;background:var(--mint);color:#fff;letter-spacing:-.3px}
-.btn:active{background:var(--mint-d)}
+.btn{border:0;border-radius:14px;padding:14px 0;width:100%;font-size:14.5px;font-weight:800;background:var(--accent);color:var(--accent-on);letter-spacing:-.3px}
+.btn:active{background:var(--accent-d)}
 .btn.sec{background:#F2F4F6;color:#5C646E}
 .btn.danger{background:var(--ex-soft);color:var(--ex)}
 .btnrow{display:flex;gap:8px}
@@ -344,6 +357,50 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .catrow .nmbtn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;text-align:left;color:inherit;-webkit-tap-highlight-color:transparent}
 .catrow .nmbtn:active{opacity:.55}
 .addbtn{width:100%;border:1px dashed #CBD2DA;background:#fff;color:#5C646E;border-radius:12px;padding:11px 0;font-size:12.5px;font-weight:800}
+
+/* ---------- 색상 테마 (설정) ---------- */
+.themecard{background:#fff;border-radius:18px;padding:12px 12px 13px;margin-top:8px}
+.tprev{background:#F7F8FA;border-radius:16px;padding:10px}
+.tprev .bal{padding:12px 14px 11px;border-radius:16px}
+.tprev .bal .t{font-size:10.5px}
+.tprev .bal .v{font-size:21px;margin:1px 0 8px}
+.tprev .bal .r{padding-top:7px}
+.tprev .bal .r span{font-size:9.5px}
+.tprev .bal .r b{font-size:11px}
+.tprev-rows{margin-top:8px;background:#fff;border-radius:12px;overflow:hidden}
+.tprev-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #F5F6F8;font-size:12px;font-weight:700}
+.tprev-row:last-child{border-bottom:0}
+.tprev-row .ic{font-size:14px;line-height:1;flex:0 0 auto}
+.tprev-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3A4048}
+.tprev-row .amt{font-size:12.5px;font-weight:800;letter-spacing:-.3px;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.tprev-row .amt.inc{color:var(--income-ink)}
+.tprev-row .amt.ex{color:var(--bank-ink)}
+.tprev-row .amt.vio{color:var(--card-ink)}
+.tprev-acts{display:flex;align-items:center;gap:6px;margin-top:8px}
+.tprev-acts .btn{flex:1;padding:9px 0;font-size:12.5px;border-radius:12px}
+.tprev-acts .chip{font-size:10.5px;padding:6px 10px}
+.tprev .bar{height:6px;margin:8px 0 0}
+.tgroup{border-top:1px solid var(--line);margin-top:12px;padding-top:11px}
+.tgroup:first-of-type{border-top:0;margin-top:6px;padding-top:2px}
+.trow{display:flex;align-items:center;gap:8px}
+.tcur{width:14px;height:14px;border-radius:50%;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(20,30,40,.14)}
+.ttx{flex:1;min-width:0}
+.ttx b{display:block;font-size:12.5px;font-weight:800;letter-spacing:-.2px}
+.ttx span{display:block;font-size:10.5px;color:var(--sub);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thex{font-size:10px;font-weight:800;color:#8B929C;font-variant-numeric:tabular-nums;letter-spacing:.1px;flex:0 0 auto}
+.tpal{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:9px}
+.tsw-chip{position:relative;height:30px;border:0;border-radius:9px;padding:0;background:var(--sw);box-shadow:inset 0 0 0 1px rgba(20,30,40,.10);-webkit-tap-highlight-color:transparent}
+.tsw-chip:active{transform:scale(.94)}
+.tsw-chip.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ink)}
+.tsw-chip.on::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.tfoot{margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tcustom{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#F7F8FA;border-radius:10px;padding:6px 9px;font-size:11.5px;font-weight:800;color:#5C646E;cursor:pointer}
+.tcustom input[type=color]{width:28px;height:22px;border:0;padding:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.tcustom input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.tcustom input[type=color]::-webkit-color-swatch{border:1px solid rgba(20,30,40,.16);border-radius:6px}
+.thint{font-size:10.5px;color:var(--sub);font-weight:600;margin-top:7px;line-height:1.45}
+.resetbtn{width:100%;margin-top:12px;border:1px solid var(--line);background:#F7F8FA;color:#5C646E;border-radius:12px;padding:11px 0;font-size:12.5px;font-weight:800}
+.resetbtn:active{background:#EEF1F4}
 .addbtn:active{background:#F7F8FA}
 .catprev{display:flex;align-items:center;gap:11px;background:#F7F8FA;border-radius:14px;padding:11px 12px}
 .catprev .ic{width:48px;height:48px;border-radius:14px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-size:25px;line-height:1;flex:0 0 auto}
@@ -362,7 +419,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .addrow{display:flex;gap:7px;padding:10px 14px 13px}
 .addrow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:16px;font-weight:700;outline:0}
 .addrow input:focus{border-color:var(--mint)}
-.addrow button{border:0;background:var(--mint);color:#fff;border-radius:11px;padding:0 13px;font-size:12.5px;font-weight:800;flex:0 0 auto;white-space:nowrap}
+.addrow button{border:0;background:var(--accent);color:var(--accent-on);border-radius:11px;padding:0 13px;font-size:12.5px;font-weight:800;flex:0 0 auto;white-space:nowrap}
 
 /* ---------- 할부 관리 ---------- */
 .irow{width:100%;display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:0;border-bottom:1px solid #F5F6F8;background:#fff;text-align:left;color:inherit;cursor:pointer}
@@ -372,12 +429,12 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .irow .imain{flex:1;min-width:0;display:block}
 .irow .itop{display:flex;align-items:center;gap:5px}
 .irow .inm{font-size:13px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.irow .iseq{font-size:9.5px;font-weight:800;color:#6A57E8;background:#F0EDFF;border-radius:5px;padding:1px 5px;flex:0 0 auto}
+.irow .iseq{font-size:9.5px;font-weight:800;color:var(--card-ink);background:var(--card-soft);border-radius:5px;padding:1px 5px;flex:0 0 auto}
 .irow .itot{font-size:12.5px;font-weight:800;letter-spacing:-.3px;margin-left:auto;flex:0 0 auto;font-variant-numeric:tabular-nums}
 .irow .isub{display:block;font-size:10.5px;color:var(--sub);font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .irow .isub b{color:#3A4048;font-weight:800}
 .irow .iprog{display:block;height:4px;border-radius:3px;background:#F0F2F5;margin-top:7px;overflow:hidden}
-.irow .iprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8B7CF8,#6A57E8)}
+.irow .iprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--card-color),var(--card-d))}
 .irow.done .iseq{background:#F2F4F6;color:#8B929C}
 .irow.done .iprog i{background:#D8DDE3}
 .irow.done .itot{color:var(--sub)}
@@ -818,6 +875,98 @@ var CORE = (function () {
     return null;
   }
 
+  /* ================= 색상 테마 (순수 계산 — DOM 없음) ================= */
+  var THEME_KEYS = ['accent', 'income', 'bank', 'card'];
+  var THEME_DEFAULTS = { accent: '#0FB9A5', income: '#2E8BF0', bank: '#F2545B', card: '#7B3FE4' };
+  /* 설정 화면 팔레트 — 파스텔·비비드·모노톤을 섞은 16칸 (첫 칸이 기본 색) */
+  var THEME_PRESETS = {
+    accent: ['#0FB9A5', '#14C4B8', '#2FA8C7', '#4C8DF0', '#6C5CE7', '#A55EEA', '#E84393', '#F2545B',
+      '#F5893A', '#F5B32B', '#8BC34A', '#2D3436', '#7FE0D2', '#AFC8F7', '#F6C6C9', '#CBB9F0'],
+    income: ['#2E8BF0', '#3D7BF7', '#1B6FC9', '#0E5CA8', '#2FA8C7', '#0FB9A5', '#12B886', '#39B980',
+      '#7CB342', '#5C6BC0', '#6C5CE7', '#A55EEA', '#E84393', '#F5A623', '#A9C7F5', '#9FE3D6'],
+    bank: ['#F2545B', '#E8453C', '#D23C43', '#C0392B', '#FF6B6B', '#F76C7A', '#E06B8B', '#D9558B',
+      '#F5893A', '#E67E22', '#F5A623', '#B9770E', '#8D6E63', '#A0522D', '#F6C6C9', '#2D3436'],
+    card: ['#7B3FE4', '#6C5CE7', '#5B4BD6', '#8B5CF6', '#9B59B6', '#A55EEA', '#B36AE2', '#C56CF0',
+      '#7C6CF5', '#6366F1', '#4C6EF5', '#3F51B5', '#E06B8B', '#D9558B', '#CBB9F0', '#546E7A']
+  };
+
+  /* '#abc' / '#AABBCC' → '#AABBCC', 그 외에는 null */
+  function normHex(v) {
+    var s = String(v == null ? '' : v).trim();
+    if (/^#[0-9a-f]{3}$/i.test(s)) s = '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+    return /^#[0-9a-f]{6}$/i.test(s) ? s.toUpperCase() : null;
+  }
+  function hx2rgb(hex) { var n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  /* 두 색을 t(0~1) 비율로 섮는다 — t=0 이면 a, t=1 이면 b */
+  function mixHex(a, b, t) {
+    var x = hx2rgb(a), y = hx2rgb(b);
+    var r = Math.round(x[0] + (y[0] - x[0]) * t), g = Math.round(x[1] + (y[1] - x[1]) * t), bl = Math.round(x[2] + (y[2] - x[2]) * t);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1).toUpperCase();
+  }
+  function rgbaHex(hex, a) { var c = hx2rgb(hex); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+  /* WCAG 상대 밝기·대비 */
+  function lumHex(hex) {
+    var c = hx2rgb(hex).map(function (v) { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function contrastHex(a, b) {
+    var x = lumHex(a), y = lumHex(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  }
+  /* 흰 배경에 글자로 쓸 때 — 너무 밝은 색만 읽히는 만큼 어둡게 조정 */
+  function textHex(hex) {
+    if (contrastHex(hex, '#FFFFFF') >= 3.2) return hex;
+    var c = hex;
+    for (var i = 0; i < 26 && contrastHex(c, '#FFFFFF') < 4.5; i++) c = mixHex(c, '#000000', 0.08);
+    return c;
+  }
+  /* 색을 배경으로 솔 때 어울리는 글자색 (흰색/진한 잉크) */
+  function onHex(bg) { return contrastHex('#FFFFFF', bg) >= 2.2 ? '#FFFFFF' : '#1A1D21'; }
+  /* 저장된 설정에서 색 네 가지를 읽는다 (없거나 잘못됐으면 기본 색) */
+  function themeColors(settings) {
+    var saved = (settings && settings.colors) || {};
+    var out = {};
+    THEME_KEYS.forEach(function (k) { out[k] = normHex(saved[k]) || THEME_DEFAULTS[k]; });
+    return out;
+  }
+  /* CSS 변수로 내려보낼 값 — 테마 색 + 파생 명암·연한 배경·글자색 */
+  function themeVars(settings) {
+    var c = themeColors(settings);
+    var accL = mixHex(c.accent, '#FFFFFF', 0.14);
+    var accD = mixHex(c.accent, '#000000', 0.18);
+    var onAcc = onHex(accD);          /* 잔액 카드 그라데이션(진한 쪽) 위 글자색 */
+    var v = {
+      '--accent': c.accent, '--accent-l': accL, '--accent-d': accD,
+      '--accent-soft': mixHex(c.accent, '#FFFFFF', 0.90),
+      '--accent-ink': textHex(c.accent),
+      '--accent-on': onAcc,
+      '--accent-ring': rgbaHex(c.accent, 0.5),
+      '--accent-shadow': rgbaHex(accD, 0.30),
+      '--accent-line': rgbaHex(onAcc, 0.22)
+    };
+    ['income', 'bank', 'card'].forEach(function (k) {
+      var raw = c[k];
+      v['--' + k + '-color'] = raw;
+      v['--' + k + '-soft'] = mixHex(raw, '#FFFFFF', 0.90);
+      v['--' + k + '-ink'] = textHex(raw);
+      v['--' + k + '-d'] = mixHex(raw, '#000000', 0.20);
+    });
+    return v;
+  }
+  /* 통계 도넛·카테고리 바 색 — 기본 팔레트의 첫 칸을 메인 테마 색으로 바꿔 테마를 따라가게 */
+  var STAT_BASE = ['#0FB9A5', '#7C6CF5', '#F5A623', '#4C8DF0', '#F2545B', '#B36AE2',
+    '#39B980', '#2FA8C7', '#E06B8B', '#8B6B4A', '#9DB52B', '#5A7FA8'];
+  function statPalette(settings) {
+    var acc = themeColors(settings).accent;
+    var out = STAT_BASE.slice();
+    out[0] = acc;
+    for (var i = 1; i < out.length; i++) {
+      /* 다른 칸이 테마 색과 똑같아지면 살짝 밝게 해서 구분 */
+      if (normHex(out[i]) === acc) out[i] = mixHex(out[i], '#FFFFFF', 0.3);
+    }
+    return out;
+  }
+
   return {
     pad2: pad2, ymd: ymd, ymOf: ymOf, ymParts: ymParts, daysInMonth: daysInMonth,
     clampDay: clampDay, ymAdd: ymAdd, monthDiff: monthDiff, cmpYm: cmpYm, dayDiff: dayDiff,
@@ -828,7 +977,11 @@ var CORE = (function () {
     monthFull: monthFull, sumExpenseInRange: sumExpenseInRange, budgetStats: budgetStats,
     isCardBillCat: isCardBillCat, isSavingCat: isSavingCat, isCardBill: isCardBill, isSaving: isSaving,
     isBudgetExcluded: isBudgetExcluded, excludeKind: excludeKind, calcEval: calcEval,
-    findBudgetAt: findBudgetAt, startYmOf: startYmOf
+    findBudgetAt: findBudgetAt, startYmOf: startYmOf,
+    THEME_KEYS: THEME_KEYS, THEME_DEFAULTS: THEME_DEFAULTS, THEME_PRESETS: THEME_PRESETS,
+    normHex: normHex, mixHex: mixHex, hx2rgb: hx2rgb,
+    rgbaHex: rgbaHex, lumHex: lumHex, contrastHex: contrastHex, textHex: textHex, onHex: onHex,
+    themeColors: themeColors, themeVars: themeVars, statPalette: statPalette
   };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = CORE;
@@ -844,9 +997,38 @@ var App = (function () {
   var st = { route: 'calendar', ym: '', selDay: '', budgetId: null, statCat: null, input: null };
 
   var PALETTE = ['#0FB9A5', '#7C6CF5', '#F5A623', '#4C8DF0', '#F2545B', '#39B980', '#B36AE2'];
-  /* 통계 차트 카테고리 색 (항목 추가 순서대로 고정) */
-  var STAT_COLORS = ['#0FB9A5', '#7C6CF5', '#F5A623', '#4C8DF0', '#F2545B', '#B36AE2',
-    '#39B980', '#2FA8C7', '#E06B8B', '#8B6B4A', '#9DB52B', '#5A7FA8'];
+
+  /* ---------------- 색상 테마 ---------------- */
+  var THEME_LABELS = {
+    accent: ['메인 테마', '잔액 카드·+ 버튼·활성 탭·예산 바·저장 버튼'],
+    income: ['수입', '달력·내역·통계의 수입 금액'],
+    bank: ['통장 지출', '계좌·체크카드로 나간 금액'],
+    card: ['신용카드', '카드로 긁은 금액']
+  };
+  function themeColors() { return CORE.themeColors(db && db.settings); }
+  /* 고른 색을 CSS 변수로 내려 화면 전체(달력·내역·통계·예산·모달)에 바로 적용 */
+  function applyTheme() {
+    var c = themeColors();
+    var v = CORE.themeVars(db && db.settings);
+    var root = document.documentElement;
+    Object.keys(v).forEach(function (k) { root.style.setProperty(k, v[k]); });
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', c.accent);
+    return c;
+  }
+  /* 색을 고른 그룹만 다시 그리지 않고 선택 표시·현재 색 글자만 갱신 (스크롤이 튀지 않게) */
+  function syncThemeUI(key, hex) {
+    var host = document.querySelector('.tgroup[data-theme="' + key + '"]');
+    if (!host) return;
+    Array.prototype.forEach.call(host.querySelectorAll('.tsw-chip'), function (b) {
+      b.classList.toggle('on', CORE.normHex(b.getAttribute('data-hex')) === hex);
+    });
+    Array.prototype.forEach.call(host.querySelectorAll('.tcur'), function (s) { s.style.background = hex; });
+    var hexEl = host.querySelector('.thex');
+    if (hexEl) hexEl.textContent = hex;
+    var inp = host.querySelector('input[type=color]');
+    if (inp && String(inp.value).toUpperCase() !== hex) inp.value = hex.toLowerCase();
+  }
 
   function hexShade(hex, f) {
     var n = parseInt(String(hex).slice(1), 16);
@@ -860,8 +1042,9 @@ var App = (function () {
     var i = -1;
     list.forEach(function (c, k) { if (c.id === id) i = k; });
     if (i < 0) return '#C3C9D1';
+    var pal = CORE.statPalette(db && db.settings);
     /* 항목이 12개를 넘어 색이 한 바퀴 돌면 같은 색을 조금 진하게 써서 구분 */
-    return hexShade(STAT_COLORS[i % STAT_COLORS.length], i >= STAT_COLORS.length ? 0.72 : 1);
+    return hexShade(pal[i % pal.length], i >= pal.length ? 0.72 : 1);
   }
   function pctText(v, total) {
     if (!total || !v) return '0%';
@@ -928,6 +1111,15 @@ var App = (function () {
   function normalize(d) {
     d.settings = d.settings || {};
     if (d.settings.carryOver === undefined) d.settings.carryOver = true;
+    /* 색상 테마 — 저장된 값 중 쓸 수 있는 것만 남김 (백업 가져오기·옛 데이터 포함) */
+    var colors = {}, hasColor = false;
+    if (d.settings.colors && typeof d.settings.colors === 'object') {
+      CORE.THEME_KEYS.forEach(function (k) {
+        var v = CORE.normHex(d.settings.colors[k]);
+        if (v) { colors[k] = v; hasColor = true; }
+      });
+    }
+    if (hasColor) d.settings.colors = colors; else delete d.settings.colors;
     d.cards = d.cards || [];
     d.categories = d.categories || { expense: [], income: [] };
     d.categories.expense = d.categories.expense || [];
@@ -1104,6 +1296,7 @@ var App = (function () {
 
   /* ---------------- 렌더 ---------------- */
   function render() {
+    applyTheme();
     var scr = document.getElementById('scr');
     if (st.route === 'calendar') scr.innerHTML = viewCalendar();
     else if (st.route === 'stats') scr.innerHTML = viewStats();
@@ -1514,9 +1707,56 @@ var App = (function () {
     return h;
   }
 
+  /* ---------------- 색상 테마 (설정 화면) ---------------- */
+  function themePreviewHtml() {
+    return '<div class="tprev">' +
+      '<div class="bal">' +
+      '  <div class="t">11월 통장 잔액 (이월 포함)</div>' +
+      '  <div class="v">163,418<small>원</small></div>' +
+      '  <div class="r"><div><span>수입</span><b>+2,400,000</b></div>' +
+      '    <div><span>통장 지출</span><b>-980,000</b></div>' +
+      '    <div><span>전월 이월</span><b>427,797</b></div></div>' +
+      '</div>' +
+      '<div class="tprev-rows">' +
+      '  <div class="tprev-row"><span class="ic">💰</span><span class="nm">급여</span><span class="amt inc">+2,400,000</span></div>' +
+      '  <div class="tprev-row"><span class="ic">🚇</span><span class="nm">지하철·버스</span><span class="amt ex">-9,000</span></div>' +
+      '  <div class="tprev-row"><span class="ic">🛍️</span><span class="nm">겨울 부츠</span><span class="amt vio">-120,000</span></div>' +
+      '</div>' +
+      '<div class="tprev-acts"><span class="btn" style="display:block;text-align:center">저장하기</span><span class="chip on">이번 달</span></div>' +
+      '<div class="bar"><i style="width:64%"></i></div>' +
+      '</div>';
+  }
+  function themeGroupHtml(key) {
+    var lb = THEME_LABELS[key], cur = themeColors()[key];
+    var h = '<div class="tgroup" data-theme="' + key + '">' +
+      '<div class="trow"><span class="tcur" style="background:' + cur + '"></span>' +
+      '<div class="ttx"><b>' + lb[0] + '</b><span>' + lb[1] + '</span></div>' +
+      '<span class="thex">' + cur + '</span>' +
+      '<button class="act" onclick="App.resetThemeKey(\'' + key + '\')">기본</button></div>' +
+      '<div class="tpal">';
+    (CORE.THEME_PRESETS[key] || []).forEach(function (p) {
+      h += '<button type="button" class="tsw-chip' + (p === cur ? ' on' : '') + '"' +
+        ' data-hex="' + p + '" style="--sw:' + p + '" aria-label="' + lb[0] + ' ' + p + '"' +
+        ' onclick="App.setThemeColor(\'' + key + '\',\'' + p + '\')"></button>';
+    });
+    h += '</div><div class="tfoot">' +
+      '<label class="tcustom">직접 고르기' +
+      '<input type="color" value="' + cur + '" aria-label="' + lb[0] + ' 색 직접 고르기"' +
+      ' oninput="App.setThemeColor(\'' + key + '\',this.value,false)" onchange="App.setThemeColor(\'' + key + '\',this.value)"></label>' +
+      '<span class="thint" style="margin:0">어떤 색이든 고를 수 있어요</span></div></div>';
+    return h;
+  }
+
   /* ④ 설정 ================================================= */
   function viewSettings() {
     var h = '<div class="vhead"><div class="ttl">설정</div></div><div class="wrap">';
+
+    /* 색상 테마 */
+    h += '<div class="sect-h"><b>색상 테마</b><span class="l">누르면 바로 바뀌어요</span></div>';
+    h += '<div class="themecard">' + themePreviewHtml();
+    CORE.THEME_KEYS.forEach(function (k) { h += themeGroupHtml(k); });
+    h += '<button class="resetbtn" onclick="App.resetTheme()">기본 색상으로 초기화</button>' +
+      '<div class="thint">고른 색은 이 기기에 저장되고, JSON 백업에도 함께 담겨요.</div></div>';
 
     /* 카드 */
     h += '<div class="sect-h"><b>신용카드</b></div>';
@@ -2486,6 +2726,28 @@ var App = (function () {
       db.settings.startBalance = num(el.value);
       if (!CORE.ymOf(db.settings.startMonth || '')) db.settings.startMonth = CORE.ymOf(today());
       save(); render(); toast('시작 잔액을 저장했어요');
+    },
+    /* 색상 테마 — 칩은 바로 저장, 컬러 피커는 움직이는 동안 미리보기만 */
+    setThemeColor: function (key, hex, saveNow) {
+      hex = CORE.normHex(hex);
+      if (CORE.THEME_KEYS.indexOf(key) < 0 || !hex) return;
+      var c = themeColors();
+      c[key] = hex;
+      db.settings = db.settings || {};
+      db.settings.colors = c;
+      applyTheme();
+      if (saveNow !== false) save();
+      syncThemeUI(key, hex);
+    },
+    resetThemeKey: function (key) {
+      if (CORE.THEME_KEYS.indexOf(key) < 0) return;
+      api.setThemeColor(key, CORE.THEME_DEFAULTS[key]);
+      toast('기본 색으로 되돌렸어요');
+    },
+    resetTheme: function () {
+      if (db.settings) delete db.settings.colors;
+      applyTheme(); save(); render();
+      toast('기본 색상으로 초기화했어요');
     },
 
     /* 백업 */
