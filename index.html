@@ -664,7 +664,7 @@ var CORE = (function () {
     if (c.isSaving === true || c.budgetExclude === 'saving') return 'saving';
     var nm = normName(c.name);
     if (nm.indexOf('카드대금') >= 0) return 'cardbill';
-    if (nm.indexOf('저축') >= 0) return 'saving';
+    if (nm.indexOf('저축') >= 0 || nm.indexOf('적금') >= 0) return 'saving';
     return null;
   }
   /* 'cardbill' · 'saving' · null */
