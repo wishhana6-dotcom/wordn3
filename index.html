@@ -54,8 +54,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 
 /* ---------- 공통 ---------- */
 .vhead{
-  position:sticky;top:0;z-index:20;background:rgba(244,245,247,.94);
-  backdrop-filter:saturate(180%) blur(12px);
+  position:sticky;top:0;z-index:20;background:var(--bg);
   padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;
   display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
@@ -93,6 +92,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .ct-top{display:flex;align-items:center;gap:5px;font-size:10.5px;color:#6C747E;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ct-top i{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
 .ct-amt{font-size:14px;font-weight:800;letter-spacing:-.4px;margin-top:4px}
+.ct-amt.vio{color:var(--violet)}
 .ct-bar{height:3px;border-radius:3px;background:#F0F2F5;margin-top:7px;overflow:hidden}
 .ct-bar i{display:block;height:100%;border-radius:3px}
 .ctile.empty{display:flex;align-items:center;justify-content:center;color:#A3AAB3;font-size:11.5px;font-weight:700;text-align:center}
@@ -161,7 +161,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 
 /* ---------- 예산 탭 ---------- */
 .bbig{border-radius:20px;padding:16px;background:#fff;box-shadow:0 4px 14px rgba(25,35,45,.05)}
-.bbig .lbl{font-size:12px;font-weight:800;color:var(--mint-d);letter-spacing:-.2px}
+.bbig .lbl{font-size:12px;font-weight:800;color:var(--accent-ink);letter-spacing:-.2px}
 .bbig .per{font-size:11.5px;color:var(--sub);font-weight:600;margin-top:2px}
 .bbig .rem{font-size:28px;font-weight:800;letter-spacing:-1px;margin:10px 0 2px}
 .bbig .rem small{font-size:14px;font-weight:700;margin-left:2px}
@@ -170,6 +170,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .kbox{background:#F7F8FA;border-radius:12px;padding:9px 10px}
 .kbox .k{font-size:10.5px;color:var(--sub);font-weight:700;margin-bottom:3px}
 .kbox .v{font-size:14px;font-weight:800;letter-spacing:-.4px}
+.kbox .v.inc{color:var(--inc)}.kbox .v.ex{color:var(--ex)}.kbox .v.vio{color:var(--violet)}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:12px 14px 2px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:#666E78;font-size:11.5px;font-weight:700;padding:7px 11px;border-radius:999px}
@@ -242,11 +243,11 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 #tabs{
   display:flex;align-items:flex-end;justify-content:space-around;
   height:calc(62px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
-  background:rgba(255,255,255,.97);border-top:1px solid var(--line);
-  backdrop-filter:blur(12px);position:relative;z-index:30;
+  background:#FFFFFF;border-top:1px solid var(--line);
+  position:relative;z-index:30;
 }
 #tabs button{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;color:#A3AAB3;font-size:10px;font-weight:700;letter-spacing:-.2px}
-#tabs button.on{color:var(--mint-d)}
+#tabs button.on{color:var(--accent-ink)}
 #tabs #fab:active{transform:scale(.94)}
 #tabs button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 #fabwrap{flex:0 0 66px;display:flex;justify-content:center}
@@ -279,6 +280,9 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 
 .amountbox{display:flex;align-items:baseline;justify-content:flex-end;gap:4px;padding:2px 2px 9px;border-bottom:2px solid var(--ink)}
 .amountbox input{border:0;outline:0;text-align:right;font-size:28px;font-weight:800;letter-spacing:-1.2px;width:100%;background:transparent;min-width:0}
+.amountbox.inc input{color:var(--inc)}
+.amountbox.ex input{color:var(--ex)}
+.amountbox.vio input{color:var(--violet)}
 .amountbox input::placeholder{color:#D3D8DE}
 .amountbox span{font-size:15px;font-weight:700;color:#9AA1AA}
 
@@ -359,7 +363,17 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .addbtn{width:100%;border:1px dashed #CBD2DA;background:#fff;color:#5C646E;border-radius:12px;padding:11px 0;font-size:12.5px;font-weight:800}
 
 /* ---------- 색상 테마 (설정) ---------- */
-.themecard{background:#fff;border-radius:18px;padding:12px 12px 13px;margin-top:8px}
+.themecard{background:#fff;border-radius:18px;padding:0 12px;margin-top:2px;overflow:hidden}
+.themerow{display:flex;align-items:center;gap:9px;width:100%;border:0;background:transparent;padding:14px 2px;text-align:left;-webkit-tap-highlight-color:transparent}
+.themerow:active{opacity:.65}
+.themerow b{font-size:13.5px;font-weight:800;letter-spacing:-.2px;flex:1;min-width:0;color:var(--ink)}
+.themerow .tdots{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
+.tdot{width:11px;height:11px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(20,30,40,.14)}
+.tchev{width:16px;height:16px;stroke:#8B929C;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;transition:transform .24s ease}
+.themecard.open .tchev{transform:rotate(180deg)}
+.themebody{overflow:hidden;height:0;opacity:0;transition:height .26s cubic-bezier(.22,.61,.36,1),opacity .18s ease}
+.themecard.open .themebody{opacity:1}
+.themebody .tbody{padding-bottom:13px}
 .tprev{background:#F7F8FA;border-radius:16px;padding:10px}
 .tprev .bal{padding:12px 14px 11px;border-radius:16px}
 .tprev .bal .t{font-size:10.5px}
@@ -430,7 +444,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .irow .itop{display:flex;align-items:center;gap:5px}
 .irow .inm{font-size:13px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .irow .iseq{font-size:9.5px;font-weight:800;color:var(--card-ink);background:var(--card-soft);border-radius:5px;padding:1px 5px;flex:0 0 auto}
-.irow .itot{font-size:12.5px;font-weight:800;letter-spacing:-.3px;margin-left:auto;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.irow .itot{font-size:12.5px;font-weight:800;letter-spacing:-.3px;margin-left:auto;flex:0 0 auto;font-variant-numeric:tabular-nums;color:var(--violet)}
 .irow .isub{display:block;font-size:10.5px;color:var(--sub);font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .irow .isub b{color:#3A4048;font-weight:800}
 .irow .iprog{display:block;height:4px;border-radius:3px;background:#F0F2F5;margin-top:7px;overflow:hidden}
@@ -913,11 +927,14 @@ var CORE = (function () {
     var x = lumHex(a), y = lumHex(b);
     return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
   }
-  /* 흰 배경에 글자로 쓸 때 — 너무 밝은 색만 읽히는 만큼 어둡게 조정 */
+  /* 흰 배경에 글자로 쓸 때 — 고른 색을 그대로 쓴다.
+     아주 밝아서 흰 배경에서 거의 안 보이는 색(대비 2.0 미만)만, 그 색이 살아 있게 최소한으로만 어둡게. */
+  var INK_MIN_CONTRAST = 2.0;      /* 이 이상이면 고른 hex 그대로 */
+  var INK_FIX_CONTRAST = 2.2;      /* 보정할 때 도달할 목표(최소 보정) */
   function textHex(hex) {
-    if (contrastHex(hex, '#FFFFFF') >= 3.2) return hex;
-    var c = hex;
-    for (var i = 0; i < 26 && contrastHex(c, '#FFFFFF') < 4.5; i++) c = mixHex(c, '#000000', 0.08);
+    var c = normHex(hex) || hex;
+    if (contrastHex(c, '#FFFFFF') >= INK_MIN_CONTRAST) return c;
+    for (var i = 0; i < 60 && contrastHex(c, '#FFFFFF') < INK_FIX_CONTRAST; i++) c = mixHex(c, '#000000', 0.03);
     return c;
   }
   /* 색을 배경으로 솔 때 어울리는 글자색 — 흰 글자가 3:1은 나와야 흰색, 아니면 진한 잉크 */
@@ -980,6 +997,7 @@ var CORE = (function () {
     findBudgetAt: findBudgetAt, startYmOf: startYmOf,
     THEME_KEYS: THEME_KEYS, THEME_DEFAULTS: THEME_DEFAULTS, THEME_PRESETS: THEME_PRESETS,
     normHex: normHex, mixHex: mixHex, hx2rgb: hx2rgb,
+    INK_MIN_CONTRAST: INK_MIN_CONTRAST, INK_FIX_CONTRAST: INK_FIX_CONTRAST,
     rgbaHex: rgbaHex, lumHex: lumHex, contrastHex: contrastHex, textHex: textHex, onHex: onHex,
     themeColors: themeColors, themeVars: themeVars, statPalette: statPalette
   };
@@ -994,7 +1012,7 @@ var App = (function () {
   'use strict';
   var LS = 'dy-budget-v1';
   var db = null;
-  var st = { route: 'calendar', ym: '', selDay: '', budgetId: null, statCat: null, input: null };
+  var st = { route: 'calendar', ym: '', selDay: '', budgetId: null, statCat: null, input: null, themeOpen: false };
 
   var PALETTE = ['#0FB9A5', '#7C6CF5', '#F5A623', '#4C8DF0', '#F2545B', '#39B980', '#B36AE2'];
 
@@ -1018,6 +1036,12 @@ var App = (function () {
   }
   /* 색을 고른 그룹만 다시 그리지 않고 선택 표시·현재 색 글자만 갱신 (스크롤이 튀지 않게) */
   function syncThemeUI(key, hex) {
+    /* 접힌 헤더의 작은 색 점도 같이 갱신 */
+    var card = document.getElementById('themecard');
+    if (card) {
+      var dot = card.querySelector('.tdot[data-theme="' + key + '"]');
+      if (dot) dot.style.background = hex;
+    }
     var host = document.querySelector('.tgroup[data-theme="' + key + '"]');
     if (!host) return;
     Array.prototype.forEach.call(host.querySelectorAll('.tsw-chip'), function (b) {
@@ -1028,6 +1052,33 @@ var App = (function () {
     if (hexEl) hexEl.textContent = hex;
     var inp = host.querySelector('input[type=color]');
     if (inp && String(inp.value).toUpperCase() !== hex) inp.value = hex.toLowerCase();
+  }
+
+  /* 색상 테마 토글 — 접힘/펼침을 높이 애니메이션으로 부드럽게 */
+  function themeAccordion(open, animate) {
+    var card = document.getElementById('themecard');
+    if (!card) return;
+    var body = card.querySelector('.themebody');
+    var row = card.querySelector('.themerow');
+    if (!body) return;
+    card.classList.toggle('open', open);
+    if (row) row.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!animate) { body.style.height = open ? 'auto' : '0px'; return; }
+    if (open) {
+      body.style.height = '0px';
+      var full = body.scrollHeight;          /* 0 높이에서도 내용 높이는 읽힌다 */
+      body.getBoundingClientRect();          /* 강제 reflow (전환 시작점 고정) */
+      body.style.height = full + 'px';
+      body.addEventListener('transitionend', function onEnd(e) {
+        if (e.target !== body || e.propertyName !== 'height') return;
+        body.removeEventListener('transitionend', onEnd);
+        if (card.classList.contains('open')) body.style.height = 'auto';
+      });
+    } else {
+      body.style.height = body.scrollHeight + 'px';
+      body.getBoundingClientRect();
+      body.style.height = '0px';
+    }
   }
 
   function hexShade(hex, f) {
@@ -1354,9 +1405,9 @@ var App = (function () {
     } else {
       cardRows.forEach(function (r) {
         var pct = Math.round((r.v / maxCard) * 100);
-        html += '<div class="ctile"><div class="ct-top"><i style="background:' + r.c.color + '"></i>' + esc(r.c.name) + '</div>' +
-          '<div class="ct-amt">' + fmt(r.v) + '<span style="font-size:10.5px;font-weight:700;color:#8B929C">원</span></div>' +
-          '<div class="ct-bar"><i style="width:' + pct + '%;background:' + r.c.color + '"></i></div></div>';
+        html += '<div class="ctile"><div class="ct-top"><i style="background:var(--card-color)"></i>' + esc(r.c.name) + '</div>' +
+          '<div class="ct-amt vio">' + fmt(r.v) + '<span style="font-size:10.5px;font-weight:700;color:#8B929C">원</span></div>' +
+          '<div class="ct-bar"><i style="width:' + pct + '%;background:var(--card-color)"></i></div></div>';
       });
     }
     html += '</div>';
@@ -1659,8 +1710,8 @@ var App = (function () {
       (bs.scheduled ? ' <span style="color:#8B929C">(예정 ' + won(bs.scheduled) + ' 포함)</span>' : '') + '</div>' +
       (bs.excluded ? '<div class="hint" style="margin-top:3px">' + excludeNote(bs, '예산 사용액') + '</div>' : '') +
       '<div class="grid2">' +
-      '<div class="kbox"><div class="k">통장 지출 (계좌·체크)</div><div class="v" style="font-size:13px">' + won(bs.spentCash) + '</div></div>' +
-      '<div class="kbox"><div class="k">신용카드 사용액 (다음 달 대금)</div><div class="v" style="font-size:13px;color:var(--violet)">' + won(bs.spentCard) + '</div></div>' +
+      '<div class="kbox"><div class="k">통장 지출 (계좌·체크)</div><div class="v ex" style="font-size:13px">' + won(bs.spentCash) + '</div></div>' +
+      '<div class="kbox"><div class="k">신용카드 사용액 (다음 달 대금)</div><div class="v vio" style="font-size:13px">' + won(bs.spentCard) + '</div></div>' +
       '</div>' +
       '<div class="bar"><i class="' + barCls + '" style="width:' + pct + '%"></i></div>' +
       '<div style="display:flex;justify-content:space-between;font-size:11px;color:#8B929C;font-weight:700">' +
@@ -1763,16 +1814,32 @@ var App = (function () {
     return h;
   }
 
+  /* 색상 테마 — 설정에서 한 줄로 접어 두고, 누르면 미리보기·팔레트가 펼쳐진다 */
+  function themeDotsHtml() {
+    var c = themeColors();
+    return CORE.THEME_KEYS.map(function (k) {
+      return '<i class="tdot" data-theme="' + k + '" style="background:' + c[k] + '"></i>';
+    }).join('');
+  }
+  function themeSectionHtml() {
+    var body = '<div class="tbody">' + themePreviewHtml();
+    CORE.THEME_KEYS.forEach(function (k) { body += themeGroupHtml(k); });
+    body += '<button class="resetbtn" onclick="App.resetTheme()">기본 색상으로 초기화</button>' +
+      '<div class="thint">고른 색은 이 기기에 저장되고, JSON 백업에도 함께 담겨요.</div></div>';
+    return '<div class="themecard' + (st.themeOpen ? ' open' : '') + '" id="themecard">' +
+      '<button type="button" class="themerow" onclick="App.toggleTheme()" aria-expanded="' +
+      (st.themeOpen ? 'true' : 'false') + '" aria-controls="themebody"><b>색상 테마</b>' +
+      '<span class="tdots">' + themeDotsHtml() + '</span>' +
+      '<svg class="tchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>' +
+      '<div class="themebody" id="themebody"' + (st.themeOpen ? ' style="height:auto"' : '') + '>' + body + '</div></div>';
+  }
+
   /* ④ 설정 ================================================= */
   function viewSettings() {
     var h = '<div class="vhead"><div class="ttl">설정</div></div><div class="wrap">';
 
-    /* 색상 테마 */
-    h += '<div class="sect-h"><b>색상 테마</b><span class="l">누르면 바로 바뀌어요</span></div>';
-    h += '<div class="themecard">' + themePreviewHtml();
-    CORE.THEME_KEYS.forEach(function (k) { h += themeGroupHtml(k); });
-    h += '<button class="resetbtn" onclick="App.resetTheme()">기본 색상으로 초기화</button>' +
-      '<div class="thint">고른 색은 이 기기에 저장되고, JSON 백업에도 함께 담겨요.</div></div>';
+    /* 색상 테마 (접었다 펼치는 토글) */
+    h += themeSectionHtml();
 
     /* 카드 */
     h += '<div class="sect-h"><b>신용카드</b></div>';
@@ -2038,7 +2105,7 @@ var App = (function () {
       '<button class="' + (isExp ? 'on e' : '') + '" onclick="App.setInputType(\'expense\')">지출</button>' +
       '<button class="' + (!isExp ? 'on i' : '') + '" onclick="App.setInputType(\'income\')">수입</button></div>';
 
-    h += '<div class="amountbox"><input id="f-amount" inputmode="numeric" placeholder="0" value="' + (num(f.amount) ? fmt(num(f.amount)) : '') + '" oninput="App.onAmount(this)"><span>원</span>' + calcBtnHtml('f-amount') + '</div>';
+    h += '<div class="amountbox ' + (isExp ? (f.method === 'credit' ? 'vio' : 'ex') : 'inc') + '"><input id="f-amount" inputmode="numeric" placeholder="0" value="' + (num(f.amount) ? fmt(num(f.amount)) : '') + '" oninput="App.onAmount(this)"><span>원</span>' + calcBtnHtml('f-amount') + '</div>';
 
     h += '<div class="field"><div class="lb">날짜</div><div class="line dateline">' +
       '<span class="dlabel" id="f-date-label">' + dateLabel(f.date) + '</span>' +
@@ -2215,6 +2282,7 @@ var App = (function () {
   var api = {
     goto: function (route) {
       if (route === 'list') route = 'stats';   /* 옛 링크·북마크 호환 */
+      if (route !== 'settings') st.themeOpen = false;   /* 설정에 들어오면 색상 테마는 접힌 상태로 */
       st._scroll = 0;
       st.route = route;
       if (route !== 'budget') st.budgetId = null;
@@ -2742,6 +2810,12 @@ var App = (function () {
       db.settings.startBalance = num(el.value);
       if (!CORE.ymOf(db.settings.startMonth || '')) db.settings.startMonth = CORE.ymOf(today());
       save(); render(); toast('시작 잔액을 저장했어요');
+    },
+    /* 색상 테마 접기/펼치기 */
+    toggleTheme: function (force) {
+      var open = typeof force === 'boolean' ? force : !st.themeOpen;
+      st.themeOpen = open;
+      themeAccordion(open, true);
     },
     /* 색상 테마 — 칩은 바로 저장, 컬러 피커는 움직이는 동안 미리보기만 */
     setThemeColor: function (key, hex, saveNow) {
