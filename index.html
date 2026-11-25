@@ -920,8 +920,8 @@ var CORE = (function () {
     for (var i = 0; i < 26 && contrastHex(c, '#FFFFFF') < 4.5; i++) c = mixHex(c, '#000000', 0.08);
     return c;
   }
-  /* 색을 배경으로 솔 때 어울리는 글자색 (흰색/진한 잉크) */
-  function onHex(bg) { return contrastHex('#FFFFFF', bg) >= 2.2 ? '#FFFFFF' : '#1A1D21'; }
+  /* 색을 배경으로 솔 때 어울리는 글자색 — 흰 글자가 3:1은 나와야 흰색, 아니면 진한 잉크 */
+  function onHex(bg) { return contrastHex('#FFFFFF', bg) >= 3 ? '#FFFFFF' : '#1A1D21'; }
   /* 저장된 설정에서 색 네 가지를 읽는다 (없거나 잘못됐으면 기본 색) */
   function themeColors(settings) {
     var saved = (settings && settings.colors) || {};
