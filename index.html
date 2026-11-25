@@ -1708,20 +1708,36 @@ var App = (function () {
   }
 
   /* ---------------- 색상 테마 (설정 화면) ---------------- */
+  /* 미리보기는 지금 보는 달의 실제 숫자를 써서, 고른 색이 실제 화면에서 어떻게 보일지 그대로 보여 준다 */
+  function themePreviewRows(s) {
+    var pick = { i: null, e: null, v: null };
+    (s.entries || []).forEach(function (e) {
+      if (e.type === 'income') { if (!pick.i) pick.i = e; }
+      else if (e.method === 'credit') { if (!pick.v) pick.v = e; }
+      else if (!pick.e) pick.e = e;
+    });
+    function row(cls, sign, e, fbName, fbAmt) {
+      var nm = e ? ((e.memo || '').trim() || (e.kind === 'fixed' ? (e.name || '정기') : catName(e.type, e.catId))) : fbName;
+      return '<div class="tprev-row"><span class="ic">' + (e ? entryIcon(e) : '•') + '</span>' +
+        '<span class="nm">' + esc(nm) + '</span>' +
+        '<span class="amt ' + cls + '">' + sign + (e ? fmt(e.amount) : fbAmt) + '</span></div>';
+    }
+    return row('inc', '+', pick.i, '급여', '2,400,000') +
+      row('ex', '-', pick.e, '지하철·버스', '9,000') +
+      row('vio', '-', pick.v, '겨울 부츠', '120,000');
+  }
   function themePreviewHtml() {
+    var ym = st.ym || CORE.ymOf(today());
+    var s = CORE.monthFull(db, ym);
     return '<div class="tprev">' +
       '<div class="bal">' +
-      '  <div class="t">11월 통장 잔액 (이월 포함)</div>' +
-      '  <div class="v">163,418<small>원</small></div>' +
-      '  <div class="r"><div><span>수입</span><b>+2,400,000</b></div>' +
-      '    <div><span>통장 지출</span><b>-980,000</b></div>' +
-      '    <div><span>전월 이월</span><b>427,797</b></div></div>' +
+      '  <div class="t">' + Number(ym.slice(5)) + '월 통장 잔액' + (db.settings.carryOver !== false ? ' (이월 포함)' : '') + '</div>' +
+      '  <div class="v">' + fmt(s.balance) + '<small>원</small></div>' +
+      '  <div class="r"><div><span>수입</span><b>' + fmt(s.income) + '</b></div>' +
+      '    <div><span>통장 지출</span><b>' + fmt(s.cashOut) + '</b></div>' +
+      '    <div><span>전월 이월</span><b>' + fmt(s.carryIn) + '</b></div></div>' +
       '</div>' +
-      '<div class="tprev-rows">' +
-      '  <div class="tprev-row"><span class="ic">💰</span><span class="nm">급여</span><span class="amt inc">+2,400,000</span></div>' +
-      '  <div class="tprev-row"><span class="ic">🚇</span><span class="nm">지하철·버스</span><span class="amt ex">-9,000</span></div>' +
-      '  <div class="tprev-row"><span class="ic">🛍️</span><span class="nm">겨울 부츠</span><span class="amt vio">-120,000</span></div>' +
-      '</div>' +
+      '<div class="tprev-rows">' + themePreviewRows(s) + '</div>' +
       '<div class="tprev-acts"><span class="btn" style="display:block;text-align:center">저장하기</span><span class="chip on">이번 달</span></div>' +
       '<div class="bar"><i style="width:64%"></i></div>' +
       '</div>';
