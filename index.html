@@ -268,6 +268,31 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .amountbox input{border:0;outline:0;text-align:right;font-size:28px;font-weight:800;letter-spacing:-1.2px;width:100%;background:transparent;min-width:0}
 .amountbox input::placeholder{color:#D3D8DE}
 .amountbox span{font-size:15px;font-weight:700;color:#9AA1AA}
+
+/* ---------- 금액 계산기 ---------- */
+.calcbtn{
+  flex:0 0 auto;align-self:center;width:32px;height:32px;border-radius:10px;border:0;background:#F2F4F6;color:#6C747E;
+  display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent;
+}
+.calcbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.calcbtn.on{background:var(--mint-soft);color:#0A8A7A;box-shadow:inset 0 0 0 1px rgba(15,185,165,.45)}
+.calcpanel{margin-top:9px;background:#F7F8FA;border-radius:14px;padding:9px 9px 8px;animation:calcIn .16s ease}
+@keyframes calcIn{from{opacity:.4;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.calcline{padding:1px 4px 7px;min-height:32px;display:flex;flex-direction:column;gap:1px}
+.calcline .exp{font-size:12.5px;font-weight:700;color:#7C848E;text-align:right;min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.calcline .eq{font-size:15.5px;font-weight:800;letter-spacing:-.4px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.calcline .eq.bad{color:var(--ex);font-size:12px;letter-spacing:0}
+.calcgrid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:36px;gap:5px}
+.calcgrid button{
+  border:0;border-radius:11px;background:#fff;color:#2C333B;font-size:16px;font-weight:800;
+  display:grid;place-items:center;padding:0;box-shadow:0 1px 2px rgba(20,30,40,.05);-webkit-tap-highlight-color:transparent;
+}
+.calcgrid button:active{transform:scale(.96);background:#EEF1F4}
+.calcgrid button.op{color:#0A8A7A;background:#EAF7F4;font-size:17px}
+.calcgrid button.fn{color:#6C747E;background:#EFF2F5;font-size:13px}
+.calcgrid button.eq{grid-row:span 2;background:var(--mint);color:#fff;font-size:18px;box-shadow:0 2px 6px rgba(10,163,145,.28)}
+.calcgrid button.eq:active{background:var(--mint-d)}
+.calcgrid button.zero{grid-column:span 2}
 .field{margin-top:11px}
 .field .lb{font-size:11.5px;font-weight:800;color:#6C747E;margin-bottom:6px;letter-spacing:-.2px}
 .line{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F7F8FA;border-radius:12px;padding:11px 12px}
@@ -514,7 +539,7 @@ var CORE = (function () {
       }
       out.push({
         date: ymd(y, m, d), type: tx.type || 'expense', amount: amount,
-        catId: tx.catId || null, method: tx.method || 'account', cardId: tx.cardId || null,
+        catId: tx.catId || null, method: tx.method || 'account', cardId: tx.cardId || null, cardBill: tx.cardBill === true,
         memo: tx.memo || '', kind: n > 1 ? 'installment' : 'tx',
         txId: tx.id, seq: n > 1 ? monthDiff(ymOf(tx.date), ym) + 1 : 0, months: n,
         totalAmount: Math.round(Number(tx.amount) || 0)
@@ -527,7 +552,7 @@ var CORE = (function () {
       if (!amt) return;
       out.push({
         date: ymd(y, m, subDayIn(sub, y, m)), type: sub.type || 'expense', amount: amt,
-        catId: sub.catId || null, method: sub.method || 'account', cardId: sub.cardId || null,
+        catId: sub.catId || null, method: sub.method || 'account', cardId: sub.cardId || null, cardBill: sub.cardBill === true,
         memo: sub.memo || '', kind: 'fixed', subId: sub.id, name: sub.name || '정기 지출',
         emoji: sub.emoji || '', seq: 0, months: 1
       });
@@ -559,6 +584,15 @@ var CORE = (function () {
       }
     });
     var income = sum(inc), expense = sum(exp);
+    /* 통계용 소비 집계: 카드대금·저축은 빼고 본다 (달력·통장 잔액은 exp 그대로) */
+    var consumeEntries = [], consumeCash = 0, consumeCard = 0, exBill = 0, exSave = 0;
+    exp.forEach(function (e) {
+      var kind = excludeKind(db, e);
+      if (kind === 'cardbill') { exBill += e.amount; return; }
+      if (kind === 'saving') { exSave += e.amount; return; }
+      consumeEntries.push(e);
+      if (e.method === 'credit') consumeCard += e.amount; else consumeCash += e.amount;
+    });
     /* 통장(현금) 흐름: 계좌이체 + 체크카드만 통장에서 바로 나간 돈. 신용카드는 다음 달 대금으로 따로 나감 */
     var cashOut = byMethod.account + byMethod.debit;
     var cardOut = byMethod.credit;
@@ -566,7 +600,12 @@ var CORE = (function () {
       ym: ym, entries: all, incomeEntries: inc, expenseEntries: exp,
       income: income, expense: expense, net: income - expense,
       cashOut: cashOut, cardOut: cardOut, cashNet: income - cashOut,
-      byMethod: byMethod, byCard: byCard
+      byMethod: byMethod, byCard: byCard,
+      consume: {
+        expense: consumeCash + consumeCard, cashOut: consumeCash, cardOut: consumeCard,
+        entries: consumeEntries
+      },
+      excludedBill: exBill, excludedSaving: exSave
     };
   }
 
@@ -608,14 +647,53 @@ var CORE = (function () {
     return s;
   }
 
+  /* ---- 예산에서 빼는 지출 판별 ----
+     '카드대금'과 '저축' 항목(또는 플래그)으로 적은 지출은 예산 사용액에서 빼고 계산한다.
+     통계(총 지출·카테고리)·통장 잔액 계산에는 그대로 들어간다. */
+  function normName(s) { return String(s == null ? '' : s).replace(/\s+/g, ''); }
+  function catOf(db, catId) {
+    var cats = (db && db.categories && db.categories.expense) || [];
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i] && cats[i].id === catId) return cats[i];
+    }
+    return null;
+  }
+  function catExcludeKind(c) {
+    if (!c) return null;
+    if (c.cardBill === true || c.budgetExclude === 'cardbill') return 'cardbill';
+    if (c.isSaving === true || c.budgetExclude === 'saving') return 'saving';
+    var nm = normName(c.name);
+    if (nm.indexOf('카드대금') >= 0) return 'cardbill';
+    if (nm.indexOf('저축') >= 0) return 'saving';
+    return null;
+  }
+  /* 'cardbill' · 'saving' · null */
+  function excludeKind(db, e) {
+    if (!e || e.type !== 'expense') return null;
+    if (e.cardBill === true || e.budgetExclude === 'cardbill') return 'cardbill';
+    if (e.isSaving === true || e.budgetExclude === 'saving') return 'saving';
+    return catExcludeKind(catOf(db, e.catId));
+  }
+  function isCardBill(db, e) { return excludeKind(db, e) === 'cardbill'; }
+  function isSaving(db, e) { return excludeKind(db, e) === 'saving'; }
+  function isBudgetExcluded(db, e) { return excludeKind(db, e) !== null; }
+  function isCardBillCat(db, catId) { return catExcludeKind(catOf(db, catId)) === 'cardbill'; }
+  function isSavingCat(db, catId) { return catExcludeKind(catOf(db, catId)) === 'saving'; }
+
   /* ---- 예산 기간 계산 ----
-     basis: 'cash' = 통장 지출(계좌·체크·카드대금) / 'all' = 카드 사용까지 포함한 전체 소비 */
+     basis: 'cash' = 통장 지출(계좌·체크) / 'all' = 카드 사용까지 포함한 전체 소비
+     두 기준 모두 카드대금·저축은 사용액에서 제외한다. */
   function sumExpenseInRange(db, start, end, basis) {
     var cashOnly = basis === 'cash';
-    var total = 0, cash = 0, card = 0, list = [], cur = ymOf(start), endYm = ymOf(end), guard = 0;
+    var total = 0, cash = 0, card = 0, bill = 0, save = 0;
+    var list = [], bills = [], savings = [];
+    var cur = ymOf(start), endYm = ymOf(end), guard = 0;
     while (cmpYm(cur, endYm) <= 0 && guard++ < 600) {
       entriesForMonth(db, cur).forEach(function (e) {
         if (e.type !== 'expense' || e.date < start || e.date > end) return;
+        var kind = excludeKind(db, e);
+        if (kind === 'cardbill') { bill += e.amount; bills.push(e); return; }   /* 카드대금은 예산에서 제외 */
+        if (kind === 'saving') { save += e.amount; savings.push(e); return; }    /* 저축은 예산에서 제외 */
         var isCard = e.method === 'credit';
         if (isCard) card += e.amount; else cash += e.amount;
         if (cashOnly && isCard) return;
@@ -624,7 +702,11 @@ var CORE = (function () {
       });
       cur = ymAdd(cur, 1);
     }
-    return { total: total, cashTotal: cash, cardTotal: card, entries: list };
+    return {
+      total: total, cashTotal: cash, cardTotal: card,
+      billTotal: bill, saveTotal: save, excludedTotal: bill + save,
+      entries: list, cardBillEntries: bills, savingEntries: savings
+    };
   }
 
   function budgetStats(db, budget, today, basis) {
@@ -648,6 +730,8 @@ var CORE = (function () {
     return {
       spent: spent, amount: amount, remaining: remaining,
       spentCash: spentInfo.cashTotal, spentCard: spentInfo.cardTotal,
+      excluded: spentInfo.excludedTotal, excludedBill: spentInfo.billTotal, excludedSaving: spentInfo.saveTotal,
+      cardBillEntries: spentInfo.cardBillEntries, savingEntries: spentInfo.savingEntries,
       basis: basis === 'cash' ? 'cash' : 'all',
       scheduled: scheduled, spentActual: spent - scheduled,
       daysLeft: daysLeft, daily: daily, phase: phase,
@@ -655,6 +739,32 @@ var CORE = (function () {
       totalDays: dayDiff(budget.start, budget.end) + 1,
       entries: spentInfo.entries
     };
+  }
+
+  /* ---- 금액 계산기: + − × ÷ (원 단위 정수 결과) ----
+     계산할 수 없으면(형식 오류·0으로 나누기) null */
+  function calcEval(expr) {
+    var s = String(expr == null ? '' : expr)
+      .replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\s+/g, '');
+    if (!s) return null;
+    s = s.replace(/[+\-*/]+$/, '');          /* 입력 중 끝에 붙은 연산자는 무시 */
+    if (!s) return null;
+    if (!/^[0-9]+(?:[+\-*/][0-9]+)*$/.test(s)) return null;
+    var nums = s.split(/[+\-*/]/).map(Number);
+    var ops = s.match(/[+\-*/]/g) || [];
+    var vals = [nums[0]];
+    for (var i = 0; i < ops.length; i++) {
+      var op = ops[i], n = nums[i + 1];
+      if (op === '*') { vals[vals.length - 1] *= n; }
+      else if (op === '/') {
+        if (!n) return null;                 /* 0으로 나누기 */
+        vals[vals.length - 1] /= n;
+      } else { vals.push(op === '-' ? -n : n); }
+    }
+    var v = 0;
+    for (var k = 0; k < vals.length; k++) v += vals[k];
+    if (!isFinite(v)) return null;
+    return Math.round(v);
   }
 
   function findBudgetAt(db, today) {
@@ -675,6 +785,8 @@ var CORE = (function () {
     subActiveIn: subActiveIn, subDayIn: subDayIn,
     entriesForMonth: entriesForMonth, monthSummary: monthSummary, carryInFor: carryInFor,
     monthFull: monthFull, sumExpenseInRange: sumExpenseInRange, budgetStats: budgetStats,
+    isCardBillCat: isCardBillCat, isSavingCat: isSavingCat, isCardBill: isCardBill, isSaving: isSaving,
+    isBudgetExcluded: isBudgetExcluded, excludeKind: excludeKind, calcEval: calcEval,
     findBudgetAt: findBudgetAt, startYmOf: startYmOf
   };
 })();
@@ -1160,9 +1272,10 @@ var App = (function () {
   /* ② 통계 ================================================= */
   function viewStats() {
     var s = CORE.monthFull(db, st.ym);
-    var total = s.expense;
+    var cs = s.consume || { expense: s.expense, cashOut: s.cashOut, cardOut: s.cardOut, entries: s.expenseEntries };
+    var total = cs.expense;
     var byCat = {};
-    s.expenseEntries.forEach(function (e) {
+    cs.entries.forEach(function (e) {
       var k = e.catId || '__none__';
       (byCat[k] = byCat[k] || []).push(e);
     });
@@ -1185,9 +1298,11 @@ var App = (function () {
       '<div class="big">' + fmt(total) + '<small>원</small></div>' +
       '<div class="r3">' +
       '  <div><span>수입</span><b class="inc">' + fmt(s.income) + '</b></div>' +
-      '  <div><span>통장 지출</span><b class="ex">' + fmt(s.cashOut) + '</b></div>' +
-      '  <div><span>카드 지출</span><b class="vio">' + fmt(s.cardOut) + '</b></div>' +
-      '</div></div>';
+      '  <div><span>통장 지출</span><b class="ex">' + fmt(cs.cashOut) + '</b></div>' +
+      '  <div><span>카드 지출</span><b class="vio">' + fmt(cs.cardOut) + '</b></div>' +
+      '</div>' +
+      ((s.excludedBill || s.excludedSaving) ? '<div class="hint" style="margin-top:8px">' + excludeNote(s, '소비 집계') + '</div>' : '') +
+      '</div>';
 
     if (!total || !rows.length) {
       h += '<div class="empty">이 달 지출 기록이 없어요</div></div>';
@@ -1227,7 +1342,7 @@ var App = (function () {
       '<div class="dleg">' + leg + '</div></div>';
 
     /* 카테고리별 지출 목록 (행을 누르면 세부 내역 펼침) */
-    h += '<div class="sect-h"><b>카테고리별 지출</b><span class="l">' + rows.length + '개 · ' + s.expenseEntries.length + '건</span></div>';
+    h += '<div class="sect-h"><b>카테고리별 지출</b><span class="l">' + rows.length + '개 · ' + cs.entries.length + '건</span></div>';
     h += '<div class="stcard">';
     rows.forEach(function (r) {
       var col = catColor('expense', r.id);
@@ -1268,6 +1383,14 @@ var App = (function () {
   }
 
   /* ③ 예산 ================================================= */
+  /* 예산에서 뺀 항목을 짧게 알려 주는 문구 */
+  function excludeNote(bs, where) {
+    var parts = [];
+    if (bs.excludedBill) parts.push('카드대금 ' + won(bs.excludedBill));
+    if (bs.excludedSaving) parts.push('저축 ' + won(bs.excludedSaving));
+    if (!parts.length) return '';
+    return parts.join(' · ') + '은 ' + (where || '예산 사용액') + '에서 제외했어요';
+  }
   function viewBudget() {
     var list = (db.budgets || []).slice().sort(function (a, b) { return a.start < b.start ? 1 : -1; });
     var cur = st.budgetId ? list.filter(function (b) { return b.id === st.budgetId; })[0] : null;
@@ -1286,7 +1409,7 @@ var App = (function () {
     }
 
     var basis = 'all';                             /* 예산은 항상 전체 소비(카드 포함) 기준 */
-    var basisName = '전체 소비 기준';
+    var basisName = '순수 소비 기준';              /* 카드대금·저축 제외 */
     var bs = CORE.budgetStats(db, cur, today(), basis);
     var pct = Math.min(100, Math.round(bs.ratio * 100));
     var barCls = bs.ratio >= 1 ? 'over' : bs.ratio >= 0.8 ? 'warn' : '';
@@ -1300,8 +1423,9 @@ var App = (function () {
       '<div class="rem ' + (bs.remaining < 0 ? 'ex' : '') + '">' + fmt(bs.remaining) + '<small>원 남음</small></div>' +
       '<div class="sub2">총 예산 ' + won(bs.amount) + ' · ' + basisName + ' 지출 ' + won(bs.spent) +
       (bs.scheduled ? ' <span style="color:#8B929C">(예정 ' + won(bs.scheduled) + ' 포함)</span>' : '') + '</div>' +
+      (bs.excluded ? '<div class="hint" style="margin-top:3px">' + excludeNote(bs, '예산 사용액') + '</div>' : '') +
       '<div class="grid2">' +
-      '<div class="kbox"><div class="k">통장 지출 (계좌·체크·카드대금)</div><div class="v" style="font-size:13px">' + won(bs.spentCash) + '</div></div>' +
+      '<div class="kbox"><div class="k">통장 지출 (계좌·체크)</div><div class="v" style="font-size:13px">' + won(bs.spentCash) + '</div></div>' +
       '<div class="kbox"><div class="k">신용카드 사용액 (다음 달 대금)</div><div class="v" style="font-size:13px;color:var(--violet)">' + won(bs.spentCard) + '</div></div>' +
       '</div>' +
       '<div class="bar"><i class="' + barCls + '" style="width:' + pct + '%"></i></div>' +
@@ -1452,8 +1576,116 @@ var App = (function () {
     return h;
   }
 
+  /* ---------------- 금액 계산기 ---------------- */
+  var CALC_OPS = '+\u2212×÷';            /* 내부 기호: + − × ÷ */
+  var calcPrev = null;
+
+  function calcFmtExp(expr) {
+    return String(expr || '')
+      .replace(/[+\-\u2212×÷]/g, function (m) { return ' ' + m + ' '; })
+      .replace(/\d+/g, function (m) { return Number(m).toLocaleString('ko-KR'); })
+      .replace(/\s+/g, ' ').trim();
+  }
+  function calcBtnHtml(id) {
+    return '<button type="button" class="calcbtn' + (st.calc && st.calc.open && st.calc.target === id ? ' on' : '') + '"' +
+      ' data-calc="' + id + '" onclick="App.toggleCalc(\'' + id + '\')" aria-label="계산기" title="계산기">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2.6" width="16" height="18.8" rx="3.2"/>' +
+      '<path d="M8 7.4h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg></button>';
+  }
+  function calcPanelHtml() {
+    var keys = [
+      ['C', 'fn'], ['←', 'fn'], ['÷', 'op'], ['×', 'op'],
+      ['7', ''], ['8', ''], ['9', ''], ['−', 'op'],
+      ['4', ''], ['5', ''], ['6', ''], ['+', 'op'],
+      ['1', ''], ['2', ''], ['3', ''], ['=', 'eq'],
+      ['0', 'zero'], ['00', '']
+    ];
+    var h = '<div class="calcpanel" id="calc-panel"><div class="calcline">' +
+      '<div class="exp" id="calc-exp"></div><div class="eq" id="calc-eq"></div></div><div class="calcgrid">';
+    keys.forEach(function (k) {
+      h += '<button type="button" class="' + k[1] + '" data-k="' + k[0] + '" onclick="App.calcKey(\'' + k[0] + '\')">' + k[0] + '</button>';
+    });
+    h += '</div></div>';
+    return h;
+  }
+  /* 계산 결과를 금액칸·미리보기에 반영 (시트를 다시 그리지 않아 화면이 튀지 않음) */
+  function calcSync() {
+    var c = st.calc;
+    if (!c || !c.open) return;
+    var v = CORE.calcEval(c.expr);
+    c.invalid = !!c.expr && v === null;
+    var input = document.getElementById(c.target);
+    if (input && !c.invalid) input.value = (c.expr && v !== null) ? fmt(v) : '';
+    var ex = document.getElementById('calc-exp');
+    if (ex) ex.textContent = calcFmtExp(c.expr);
+    var eq = document.getElementById('calc-eq');
+    if (eq) {
+      eq.className = 'eq' + (c.invalid ? ' bad' : '');
+      eq.textContent = !c.expr ? '= 0원' : c.invalid ? '계산할 수 없어요' : '= ' + won(v);
+    }
+  }
+  /* 열린 계산기를 해당 금액칸 밑에 붙이고, 닫혔거나 대상이 바뀌면 지운다 */
+  function calcMount() {
+    var old = document.getElementById('calc-panel');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var c = st.calc;
+    var on = !!(c && c.open);
+    if (calcPrev && (!on || c.target !== calcPrev)) {
+      var p = document.getElementById(calcPrev);
+      if (p) p.removeAttribute('readonly');
+      calcPrev = null;
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.calcbtn'), function (b) {
+      b.classList.toggle('on', on && b.getAttribute('data-calc') === c.target);
+    });
+    if (!on) return;
+    var input = document.getElementById(c.target);
+    if (!input) return;
+    var host = input.closest('.amountbox') || input.closest('.line');
+    if (!host) return;
+    host.insertAdjacentHTML('afterend', calcPanelHtml());
+    input.setAttribute('readonly', 'readonly');   /* 계산기 조작 중에는 키보드를 열지 않음 */
+    calcPrev = c.target;
+    calcSync();
+  }
+  /* 계산기가 시트 아래로 잘리지 않게 .sh-body만 살짝 스크롤 */
+  function calcReveal() {
+    var panel = document.getElementById('calc-panel');
+    var body = document.querySelector('#modal .sh-body');
+    if (!panel || !body) return;
+    var pr = panel.getBoundingClientRect(), br = body.getBoundingClientRect();
+    if (pr.bottom > br.bottom - 6) body.scrollTop += (pr.bottom - br.bottom) + 10;
+  }
+  function calcKey(k) {
+    var c = st.calc;
+    if (!c || !c.open) return;
+    if (k === 'C') { c.expr = ''; c.fresh = true; }
+    else if (k === '←') { c.expr = c.expr.slice(0, -1); c.fresh = false; }
+    else if (k === '=') {
+      var v = CORE.calcEval(c.expr);
+      if (v === null) { if (c.expr) toast('계산식을 확인해 주세요'); return; }
+      c.expr = String(v); c.fresh = true;
+    } else if (CALC_OPS.indexOf(k) >= 0) {
+      if (!c.expr) return;                       /* 숫자 없이 연산자로 시작하지 않음 */
+      var last = c.expr.slice(-1);
+      if (CALC_OPS.indexOf(last) >= 0) c.expr = c.expr.slice(0, -1) + k;   /* 연산자 연속 입력은 교체 */
+      else c.expr += k;
+      c.fresh = false;
+    } else {
+      var seg = c.expr.split(/[+\-\u2212×÷]/).pop();
+      if (seg.replace(/[^0-9]/g, '').length >= 12) return;             /* 한 숫자 12자리(조) 까지 */
+      if (c.fresh) { c.expr = k; c.fresh = false; }
+      else c.expr = (c.expr + k).replace(/^0+(?=\d)/, '');
+    }
+    calcSync();
+  }
+  /* 저장 시 계산식이 잘못됐으면 저장을 막는다 */
+  function calcInvalid() { return !!(st.calc && st.calc.open && st.calc.invalid); }
+
   /* ---------------- 입력 시트 ---------------- */
   function openInput(prefill) {
+    st.calc = null;
+    calcPrev = null;
     var t = today();
     st.input = {
       type: (prefill && prefill.type) || 'expense',
@@ -1498,7 +1730,7 @@ var App = (function () {
       '<button class="' + (isExp ? 'on e' : '') + '" onclick="App.setInputType(\'expense\')">지출</button>' +
       '<button class="' + (!isExp ? 'on i' : '') + '" onclick="App.setInputType(\'income\')">수입</button></div>';
 
-    h += '<div class="amountbox"><input id="f-amount" inputmode="numeric" placeholder="0" value="' + (num(f.amount) ? fmt(num(f.amount)) : '') + '" oninput="App.onAmount(this)"><span>원</span></div>';
+    h += '<div class="amountbox"><input id="f-amount" inputmode="numeric" placeholder="0" value="' + (num(f.amount) ? fmt(num(f.amount)) : '') + '" oninput="App.onAmount(this)"><span>원</span>' + calcBtnHtml('f-amount') + '</div>';
 
     h += '<div class="field"><div class="lb">날짜</div><div class="line dateline">' +
       '<span class="dlabel" id="f-date-label">' + dateLabel(f.date) + '</span>' +
@@ -1555,6 +1787,7 @@ var App = (function () {
     }
     h += '</div></div>';
     showModal(h, false);
+    calcMount();
   }
 
   /* ---------------- 항목 편집 시트 (이름 + 아이콘) ---------------- */
@@ -1633,6 +1866,8 @@ var App = (function () {
   function hideModal() {
     var m = document.getElementById('modal');
     if (!m) return false;
+    st.calc = null;
+    calcPrev = null;
     var wasOpen = !m.classList.contains('hidden');
     m.classList.add('hidden');
     m.innerHTML = '';
@@ -1710,6 +1945,21 @@ var App = (function () {
 
     /* 입력 */
     openInput: openInput,
+    toggleCalc: function (id) {
+      id = id || 'f-amount';
+      var input = document.getElementById(id);
+      if (!input) return;
+      if (st.calc && st.calc.open && st.calc.target === id) {   /* 같은 칸에서 다시 누르면 닫기 */
+        st.calc = null;
+        calcMount();
+        return;
+      }
+      var cur = num(input.value);
+      st.calc = { target: id, open: true, expr: cur > 0 ? String(cur) : '', fresh: true, invalid: false };
+      calcMount();
+      calcReveal();
+    },
+    calcKey: calcKey,
     openNewInstallment: function () { openInput({ type: 'expense', method: 'credit', months: 3 }); },
     openInstallmentList: function () { api.goto('settings'); },
     addForSelected: function () {
@@ -1754,8 +2004,10 @@ var App = (function () {
     saveTx: function () {
       syncInput();
       var f = st.input;
+      if (calcInvalid()) { toast('계산식을 확인해 주세요'); return; }
       var amount = num(f.amount);
       if (!amount) { toast('금액을 입력해 주세요'); return; }
+      if (amount < 0) { toast('금액은 0원보다 커야 해요'); return; }
       if (!f.catId) { toast('항목을 선택해 주세요'); return; }
       if (f.type === 'expense' && f.method === 'credit' && !f.cardId) { toast('카드를 선택해 주세요'); return; }
       var tx = {
@@ -1797,6 +2049,7 @@ var App = (function () {
 
     /* 예산 */
     openBudgetForm: function (id) {
+      st.calc = null; calcPrev = null;
       var b = id ? (db.budgets || []).filter(function (x) { return x.id === id; })[0] : null;
       var t = today();
       var last = (db.budgets || []).slice().sort(function (a, c) { return a.end < c.end ? 1 : -1; })[0];
@@ -1810,7 +2063,7 @@ var App = (function () {
         '<div class="field"><div class="lb">기간 시작</div><div class="line"><input type="date" id="b-start" value="' + defStart + '"></div></div>' +
         '<div class="field"><div class="lb">기간 종료</div><div class="line"><input type="date" id="b-end" value="' + defEnd + '"></div></div>' +
         '<div class="field"><div class="lb">예산 금액</div><div class="line">' +
-        '<input id="b-amount" inputmode="numeric" placeholder="0" value="' + (b ? fmt(b.amount) : '') + '" oninput="App.onAmount(this)"><span class="muted">원</span></div></div>' +
+        '<input id="b-amount" inputmode="numeric" placeholder="0" value="' + (b ? fmt(b.amount) : '') + '" oninput="App.onAmount(this)"><span class="muted">원</span>' + calcBtnHtml('b-amount') + '</div></div>' +
         '<div class="hint">급여일이 주말이면 앞당겨 받는 달도 있으니 달마다 기간을 다르게 잡아 두세요.<br>예: 11/25(수) 급여 → 11/25~12/24 · 12/25(금) 급여 → 12/25~1/24</div>' +
         '</div><div class="sh-foot">' +
         (b ? '<div class="btnrow"><button class="btn danger" onclick="App.deleteBudget(\'' + b.id + '\',true)">삭제</button>' +
@@ -1818,15 +2071,18 @@ var App = (function () {
           : '<button class="btn" onclick="App.saveBudget()">추가하기</button>') +
         '</div></div>';
       showModal(h);
+      calcMount();
     },
     saveBudget: function (id) {
       var label = document.getElementById('b-label').value.trim();
       var start = document.getElementById('b-start').value;
       var end = document.getElementById('b-end').value;
+      if (calcInvalid()) { toast('계산식을 확인해 주세요'); return; }
       var amount = num(document.getElementById('b-amount').value);
       if (!start || !end) { toast('기간을 입력해 주세요'); return; }
       if (end < start) { toast('종료일이 시작일보다 빨라요'); return; }
       if (!amount) { toast('예산 금액을 입력해 주세요'); return; }
+      if (amount < 0) { toast('금액은 0원보다 커야 해요'); return; }
       var b = { id: id || nid('b'), label: label || (start.slice(0, 7).replace('-', '년 ') + '월 예산'), start: start, end: end, amount: amount };
       var idx = -1;
       (db.budgets || []).forEach(function (x, i) { if (x.id === b.id) idx = i; });
@@ -2008,6 +2264,7 @@ var App = (function () {
 
     /* 정기 */
     openSubForm: function (id) {
+      st.calc = null; calcPrev = null;
       var s = id ? (db.subscriptions || []).filter(function (x) { return x.id === id; })[0] : null;
       var type = s ? (s.type || 'expense') : 'expense';
       var catList = db.categories[type] || [];
@@ -2023,7 +2280,7 @@ var App = (function () {
       h += '<div class="field" style="margin-top:0"><div class="lb">이름</div><div class="line">' +
         '<input type="text" id="sub-name" placeholder="예: 넷플릭스, 월세, 급여" value="' + esc(s ? s.name : '') + '" oninput="App.onSubName(this)"></div></div>';
       h += '<div class="field"><div class="lb">금액</div><div class="line">' +
-        '<input id="sub-amount" inputmode="numeric" placeholder="0" value="' + (s ? fmt(s.amount) : '') + '" oninput="App.onAmount(this)"><span class="muted">원</span></div></div>';
+        '<input id="sub-amount" inputmode="numeric" placeholder="0" value="' + (s ? fmt(s.amount) : '') + '" oninput="App.onAmount(this)"><span class="muted">원</span>' + calcBtnHtml('sub-amount') + '</div></div>';
       h += '<div class="field"><div class="lb">매월 언제</div><div class="line" style="gap:6px">' +
         '<input type="number" id="sub-day" min="1" max="31" value="' + (s && s.day !== 'end' ? s.day : 5) + '" style="width:60px;text-align:center">' +
         '<span class="muted">일</span>' +
@@ -2059,6 +2316,7 @@ var App = (function () {
         (s ? '<div class="btnrow"><button class="btn danger" onclick="App.deleteSub(\'' + s.id + '\')">삭제</button><button class="btn" onclick="App.saveSub(\'' + s.id + '\')">저장</button></div>'
           : '<button class="btn" onclick="App.saveSub()">추가하기</button>') + '</div></div>';
       showModal(h);
+      calcMount();
       var sel = document.querySelector('#sub-cats .cat.on');
       if (sel) { try { sel.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) { } }
     },
@@ -2122,6 +2380,7 @@ var App = (function () {
     },
     saveSub: function (id) {
       var name = document.getElementById('sub-name').value.trim();
+      if (calcInvalid()) { toast('계산식을 확인해 주세요'); return; }
       var amount = num(document.getElementById('sub-amount').value);
       var isLast = document.getElementById('sub-last').checked;
       var day = isLast ? 'end' : Number(document.getElementById('sub-day').value) || 1;
@@ -2133,6 +2392,7 @@ var App = (function () {
       var endMonth = document.getElementById('sub-end').value || null;
       if (!name) { toast('이름을 입력해 주세요'); return; }
       if (!amount) { toast('금액을 입력해 주세요'); return; }
+      if (amount < 0) { toast('금액은 0원보다 커야 해요'); return; }
       if (day !== 'end' && (day < 1 || day > 31)) { toast('날짜는 1~31일 사이로'); return; }
       if (method === 'credit' && !cardId) { toast('카드를 선택해 주세요'); return; }
       var prev = id ? (db.subscriptions.filter(function (x) { return x.id === id; })[0] || {}) : {};
