@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="가계부">
-<meta name="theme-color" content="#0FB9A5">
+<meta name="theme-color" content="#F4F5F7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='42' fill='%230FB9A5'/%3E%3Ctext x='90' y='122' font-size='96' font-family='-apple-system,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3E%E2%82%A9%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='42' fill='%230FB9A5'/%3E%3Ctext x='90' y='122' font-size='96' font-family='-apple-system,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3E%E2%82%A9%3C/text%3E%3C/svg%3E">
 
@@ -36,10 +36,11 @@
   --r:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
 html,body{margin:0;padding:0;height:100%;max-width:100%;overflow-x:hidden;touch-action:manipulation;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html.modal-open,body.modal-open{overflow:hidden;overscroll-behavior:none}
 body{
-  background:#E9EBEF;color:var(--ink);
+  background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
@@ -54,7 +55,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 
 /* ---------- 공통 ---------- */
 .vhead{
-  position:sticky;top:0;z-index:20;background:var(--bg);
+  position:sticky;top:0;z-index:30;background:var(--bg);box-shadow:none;
   padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;
   display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
@@ -75,8 +76,10 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .bal{
   border-radius:20px;padding:15px 16px 13px;color:var(--accent-on);
   background:linear-gradient(135deg,var(--accent-l) 0%,var(--accent-d) 100%);
-  box-shadow:0 8px 22px var(--accent-shadow);
+  /* 위쪽(헤더 쪽)으로는 절대 번지지 않게 — 음수 spread 로 그림자 시작선을 카드 안쪽 아래로 내림 */
+  box-shadow:0 12px 20px -8px var(--accent-shadow);
 }
+.wrap>.bal{margin-top:2px}
 .bal .t{font-size:11.5px;font-weight:700;opacity:.85;letter-spacing:-.1px}
 .bal .v{font-size:27px;font-weight:800;letter-spacing:-1px;margin:2px 0 10px;line-height:1.15}
 .bal .v small{font-size:15px;font-weight:700;margin-left:2px;opacity:.9}
@@ -334,6 +337,11 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .seg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 0;font-size:12px;font-weight:700;color:#6C747E}
 .seg button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
 .cardchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.cpal{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-top:8px}
+.cpal button{position:relative;height:32px;border:0;border-radius:10px;padding:0;background:var(--sw);box-shadow:inset 0 0 0 1px rgba(20,30,40,.10);-webkit-tap-highlight-color:transparent}
+.cpal button:active{transform:scale(.94)}
+.cpal button.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ink)}
+.cpal button.on::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
 .cardchips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 11px;font-size:11.5px;font-weight:700;color:#5C646E;display:flex;align-items:center;gap:5px}
 .cardchips button i{width:7px;height:7px;border-radius:50%;display:block}
 .cardchips button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
@@ -892,16 +900,24 @@ var CORE = (function () {
   /* ================= 색상 테마 (순수 계산 — DOM 없음) ================= */
   var THEME_KEYS = ['accent', 'income', 'bank', 'card'];
   var THEME_DEFAULTS = { accent: '#0FB9A5', income: '#2E8BF0', bank: '#F2545B', card: '#7B3FE4' };
-  /* 설정 화면 팔레트 — 파스텔·비비드·모노톤을 섞은 16칸 (첫 칸이 기본 색) */
+  /* 설정 화면 팔레트 — 파스텔·중간·비비드·딥/모노톤을 8칸×4줄(32색)로 (첫 칸이 기본 색) */
   var THEME_PRESETS = {
     accent: ['#0FB9A5', '#14C4B8', '#2FA8C7', '#4C8DF0', '#6C5CE7', '#A55EEA', '#E84393', '#F2545B',
-      '#F5893A', '#F5B32B', '#8BC34A', '#2D3436', '#7FE0D2', '#AFC8F7', '#F6C6C9', '#CBB9F0'],
-    income: ['#2E8BF0', '#3D7BF7', '#1B6FC9', '#0E5CA8', '#2FA8C7', '#0FB9A5', '#12B886', '#39B980',
-      '#7CB342', '#5C6BC0', '#6C5CE7', '#A55EEA', '#E84393', '#F5A623', '#A9C7F5', '#9FE3D6'],
-    bank: ['#F2545B', '#E8453C', '#D23C43', '#C0392B', '#FF6B6B', '#F76C7A', '#E06B8B', '#D9558B',
-      '#F5893A', '#E67E22', '#F5A623', '#B9770E', '#8D6E63', '#A0522D', '#F6C6C9', '#2D3436'],
-    card: ['#7B3FE4', '#6C5CE7', '#5B4BD6', '#8B5CF6', '#9B59B6', '#A55EEA', '#B36AE2', '#C56CF0',
-      '#7C6CF5', '#6366F1', '#4C6EF5', '#3F51B5', '#E06B8B', '#D9558B', '#CBB9F0', '#546E7A']
+      '#12B886', '#39B980', '#8BC34A', '#F5B32B', '#F5893A', '#E67E22', '#E06B8B', '#B36AE2',
+      '#0E5CA8', '#1B6FC9', '#5C6BC0', '#6232B6', '#7B2D3A', '#4E5B31', '#5B4A3F', '#2D3436',
+      '#7FE0D2', '#A9D9CF', '#C8DEFB', '#D8CFF7', '#F6C6C9', '#FAD9C0', '#FBECC0', '#E2E5EA'],
+    income: ['#2E8BF0', '#3D7BF7', '#4C8DF0', '#2FA8C7', '#0FB9A5', '#12B886', '#39B980', '#1B6FC9',
+      '#0E5CA8', '#5C6BC0', '#6C5CE7', '#7C6CF5', '#2D9CDB', '#009688', '#16A34A', '#7CB342',
+      '#1F3A5F', '#3A3F58', '#4E5B31', '#2D3436', '#0B7285', '#135E8A', '#1F7A5C', '#4A5568',
+      '#AFC8F7', '#C9EFE3', '#BFD9F7', '#D8CFF7', '#CFEDFF', '#D9F7E3', '#CBFBF1', '#E2E5EA'],
+    bank: ['#F2545B', '#E8453C', '#FF6B6B', '#F76C7A', '#E84393', '#D9558B', '#E06B8B', '#F5893A',
+      '#E67E22', '#F5B32B', '#B9770E', '#D23C43', '#C0392B', '#A93226', '#C2185B', '#AD1457',
+      '#7B2D3A', '#8D3B2F', '#A0522D', '#8D6E63', '#5B4A3F', '#2D3436', '#7B1E1E', '#4A1F2B',
+      '#F6C6C9', '#F7C9D3', '#FAD9C0', '#FBECC0', '#FFD8D8', '#F9C9B6', '#FBDFC7', '#E2E5EA'],
+    card: ['#7B3FE4', '#6C5CE7', '#8B5CF6', '#9B59B6', '#A55EEA', '#B36AE2', '#C56CF0', '#7C6CF5',
+      '#6366F1', '#4C6EF5', '#5B4BD6', '#3F51B5', '#7B68EE', '#9370DB', '#DA70D6', '#E06B8B',
+      '#451A8C', '#3A2E6E', '#2E3A59', '#312F4F', '#4B2E5C', '#7B2D3A', '#2D3436', '#546E7A',
+      '#CBB9F0', '#D8CFF7', '#E6D9FB', '#F0C7E8', '#F6C6C9', '#D5D3F7', '#DCE3F5', '#E2E5EA']
   };
 
   /* '#abc' / '#AABBCC' → '#AABBCC', 그 외에는 null */
@@ -1014,7 +1030,27 @@ var App = (function () {
   var db = null;
   var st = { route: 'calendar', ym: '', selDay: '', budgetId: null, statCat: null, input: null, themeOpen: false };
 
-  var PALETTE = ['#0FB9A5', '#7C6CF5', '#F5A623', '#4C8DF0', '#F2545B', '#39B980', '#B36AE2'];
+  var PALETTE = ['#4C8DF0', '#0FB9A5', '#7C6CF5', '#F2545B', '#F5A623', '#E84393', '#39B980', '#7B3FE4',
+    '#2FA8C7', '#12B886', '#5C6BC0', '#E67E22', '#D9558B', '#8BC34A', '#B36AE2', '#546E7A',
+    '#AFC8F7', '#C9EFE3', '#CBB9F0', '#F6C6C9', '#FAD9C0', '#FBECC0', '#E2E5EA', '#2D3436'];
+  /* 새 카드에 아직 안 쓴 색을 우선 배정 (다 쓰면 순환) */
+  function nextCardColor(skipId) {
+    var used = {};
+    (db.cards || []).forEach(function (c) { if (c.id !== skipId) used[String(c.color).toUpperCase()] = 1; });
+    for (var i = 0; i < PALETTE.length; i++) if (!used[PALETTE[i]]) return PALETTE[i];
+    return PALETTE[(db.cards || []).length % PALETTE.length];
+  }
+  /* 카드 색 고르기 — 팔레트 선택 표시·현재 색 글자·피커 값을 함께 갱신 */
+  function syncCardColorUI() {
+    var cur = String(api._color || '').toUpperCase();
+    Array.prototype.forEach.call(document.querySelectorAll('#c-colors button'), function (b) {
+      b.classList.toggle('on', String(b.getAttribute('data-c')).toUpperCase() === cur);
+    });
+    var hexEl = document.getElementById('c-hex');
+    if (hexEl) hexEl.textContent = cur;
+    var inp = document.getElementById('c-color');
+    if (inp && String(inp.value).toUpperCase() !== cur) inp.value = cur.toLowerCase();
+  }
 
   /* ---------------- 색상 테마 ---------------- */
   var THEME_LABELS = {
@@ -1031,7 +1067,8 @@ var App = (function () {
     var root = document.documentElement;
     Object.keys(v).forEach(function (k) { root.style.setProperty(k, v[k]); });
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', c.accent);
+    /* 상단 헤더와 같은 단색으로 고정 — 상태바 경계에 테마 색 띠가 생기지 않게 */
+    if (meta) meta.setAttribute('content', '#F4F5F7');
     return c;
   }
   /* 색을 고른 그룹만 다시 그리지 않고 선택 표시·현재 색 글자만 갱신 (스크롤이 튀지 않게) */
@@ -1405,9 +1442,10 @@ var App = (function () {
     } else {
       cardRows.forEach(function (r) {
         var pct = Math.round((r.v / maxCard) * 100);
-        html += '<div class="ctile"><div class="ct-top"><i style="background:var(--card-color)"></i>' + esc(r.c.name) + '</div>' +
+        var cc = r.c.color || 'var(--card-color)';
+        html += '<div class="ctile"><div class="ct-top"><i style="background:' + cc + '"></i>' + esc(r.c.name) + '</div>' +
           '<div class="ct-amt vio">' + fmt(r.v) + '<span style="font-size:10.5px;font-weight:700;color:#8B929C">원</span></div>' +
-          '<div class="ct-bar"><i style="width:' + pct + '%;background:var(--card-color)"></i></div></div>';
+          '<div class="ct-bar"><i style="width:' + pct + '%;background:' + cc + '"></i></div></div>';
       });
     }
     html += '</div>';
@@ -2475,33 +2513,43 @@ var App = (function () {
     /* 카드 */
     openCardForm: function (id) {
       var c = id ? cardById(id) : null;
+      var cur = CORE.normHex(c ? c.color : nextCardColor()) || nextCardColor();
+      api._color = cur;
       var h = '<div class="sheet"><div class="sh-head"><button class="xbtn" onclick="App.closeModal()">✕</button>' +
         '<div class="ttl">' + (c ? '카드 수정' : '카드 추가') + '</div><span style="width:28px"></span></div>' +
         '<div class="sh-body"><div class="field" style="margin-top:0"><div class="lb">카드 이름</div><div class="line">' +
         '<input type="text" id="c-name" placeholder="예: 신한 Deep Dream" value="' + esc(c ? c.name : '') + '"></div></div>' +
-        '<div class="field"><div class="lb">색상</div><div class="cardchips" id="c-colors">' +
+        '<div class="field"><div class="lb">색상</div><div class="cpal" id="c-colors">' +
         PALETTE.map(function (p, i) {
-          return '<button onclick="App.pickColor(' + i + ')" data-c="' + p + '" class="' + ((c ? c.color === p : i === 0) ? 'on' : '') + '" style="width:34px;height:34px;border-radius:50%;background:' + p + ';border:2px solid ' + ((c ? c.color === p : i === 0) ? '#1A1D21' : 'transparent') + '"></button>';
+          return '<button type="button" onclick="App.pickColor(' + i + ')" data-c="' + p + '" class="' + (cur === p ? 'on' : '') + '" style="--sw:' + p + '" aria-label="카드 색 ' + p + '"></button>';
         }).join('') +
-        '</div></div></div><div class="sh-foot"><button class="btn" onclick="App.saveCard(\'' + (id || '') + '\')">저장</button></div></div>';
+        '</div><div class="tfoot" style="margin-top:10px">' +
+        '<label class="tcustom">직접 고르기<input type="color" id="c-color" value="' + cur.toLowerCase() + '" aria-label="카드 색 직접 고르기" oninput="App.pickCardHex(this.value)"></label>' +
+        '<span class="thex" id="c-hex">' + cur + '</span></div></div></div>' +
+        '<div class="sh-foot"><button class="btn" onclick="App.saveCard(\'' + (id || '') + '\')">저장</button></div></div>';
       showModal(h);
-      api._color = c ? c.color : PALETTE[0];
     },
     pickColor: function (i) {
       api._color = PALETTE[i];
-      Array.prototype.forEach.call(document.querySelectorAll('#c-colors button'), function (b, k) {
-        b.style.borderColor = k === i ? '#1A1D21' : 'transparent';
-      });
+      syncCardColorUI();
+    },
+    pickCardHex: function (v) {
+      var n = CORE.normHex(v);
+      if (!n) return;
+      api._color = n;
+      syncCardColorUI();
     },
     saveCard: function (id) {
       var name = document.getElementById('c-name').value.trim();
       if (!name) { toast('카드 이름을 입력해 주세요'); return; }
+      var color = CORE.normHex(api._color);
       if (id) {
         var c = cardById(id);
-        c.name = name; c.color = api._color || c.color;
+        c.name = name; c.color = color || c.color;
       } else {
-        db.cards.push({ id: nid('c'), name: name, color: api._color || PALETTE[db.cards.length % PALETTE.length] });
+        db.cards.push({ id: nid('c'), name: name, color: color || nextCardColor() });
       }
+      api._color = null;
       save(); closeModal();
       if (st.sheet === 'input') { renderInput(); } else { render(); }
       toast('카드를 저장했어요');
@@ -2510,7 +2558,7 @@ var App = (function () {
       var el = document.getElementById('newCard');
       var name = el.value.trim();
       if (!name) return;
-      db.cards.push({ id: nid('c'), name: name, color: PALETTE[db.cards.length % PALETTE.length] });
+      db.cards.push({ id: nid('c'), name: name, color: nextCardColor() });
       save(); render(); toast('카드를 추가했어요');
     },
     deleteCard: function (id) {
