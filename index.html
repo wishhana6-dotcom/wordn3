@@ -292,7 +292,6 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 .calcgrid button.fn{color:#6C747E;background:#EFF2F5;font-size:13px}
 .calcgrid button.eq{grid-row:span 2;background:var(--mint);color:#fff;font-size:18px;box-shadow:0 2px 6px rgba(10,163,145,.28)}
 .calcgrid button.eq:active{background:var(--mint-d)}
-.calcgrid button.zero{grid-column:span 2}
 .field{margin-top:11px}
 .field .lb{font-size:11.5px;font-weight:800;color:#6C747E;margin-bottom:6px;letter-spacing:-.2px}
 .line{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F7F8FA;border-radius:12px;padding:11px 12px}
@@ -741,30 +740,72 @@ var CORE = (function () {
     };
   }
 
-  /* ---- 금액 계산기: + − × ÷ (원 단위 정수 결과) ----
+  /* ---- 금액 계산기: + − × ÷ · 소수점 (원 단위 정수 결과) ----
+     소수는 BigInt 유리수({n: 분자, d: 분모})로 계산해서 0.85×10000 같은 식에서도
+     중간 부동소수점 오차가 생기지 않고, 최종 원화 금액만 Math.round 로 반올림한다.
      계산할 수 없으면(형식 오류·0으로 나누기) null */
+  function calcTen(n) {                      /* 10^n (BigInt) */
+    var s = '1';
+    for (var i = 0; i < n; i++) s += '0';
+    return BigInt(s);
+  }
+  function calcRat(tok) {                    /* "1234.5" → { n: 12345n, d: 10n } */
+    var p = String(tok).split('.'), dec = p[1] || '';
+    return { n: BigInt((p[0] || '0') + dec), d: calcTen(dec.length) };
+  }
+  function calcGcd(a, b) {                   /* 약분용 최대공약수 */
+    if (a < BigInt(0)) a = -a;
+    while (b) { var t = a % b; a = b; b = t; }
+    return a || BigInt(1);
+  }
+  function calcRound(r) {                    /* 유리수 → Math.round 와 같은 정수 */
+    var num = r.n, den = r.d;
+    if (den < BigInt(0)) { num = -num; den = -den; }
+    var a = num * BigInt(2) + den, b = den * BigInt(2);   /* floor(x + 0.5) */
+    var q = a / b;
+    if (a % b !== BigInt(0) && a < BigInt(0)) q = q - BigInt(1);
+    return q;
+  }
   function calcEval(expr) {
     var s = String(expr == null ? '' : expr)
       .replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\s+/g, '');
     if (!s) return null;
     s = s.replace(/[+\-*/]+$/, '');          /* 입력 중 끝에 붙은 연산자는 무시 */
     if (!s) return null;
-    if (!/^[0-9]+(?:[+\-*/][0-9]+)*$/.test(s)) return null;
-    var nums = s.split(/[+\-*/]/).map(Number);
-    var ops = s.match(/[+\-*/]/g) || [];
-    var vals = [nums[0]];
-    for (var i = 0; i < ops.length; i++) {
-      var op = ops[i], n = nums[i + 1];
-      if (op === '*') { vals[vals.length - 1] *= n; }
+    var NUM = '(?:\\d+(?:\\.\\d*)?|\\.\\d+)';
+    if (!new RegExp('^' + NUM + '(?:[+\\-*/]' + NUM + ')*$').test(s)) return null;
+    var toks = s.split(/([+\-*/])/);
+    var vals = [], ops = [];
+    function apply() {
+      var b = vals.pop(), a = vals.pop(), op = ops.pop(), v;
+      if (op === '*') v = { n: a.n * b.n, d: a.d * b.d };
       else if (op === '/') {
-        if (!n) return null;                 /* 0으로 나누기 */
-        vals[vals.length - 1] /= n;
-      } else { vals.push(op === '-' ? -n : n); }
+        if (b.n === BigInt(0)) return false;              /* 0으로 나누기 */
+        v = { n: a.n * b.d, d: a.d * b.n };
+      } else {
+        v = { n: op === '-' ? a.n * b.d - b.n * a.d : a.n * b.d + b.n * a.d, d: a.d * b.d };
+      }
+      var g = calcGcd(v.n, v.d);
+      if (g > BigInt(1)) { v.n = v.n / g; v.d = v.d / g; }
+      vals.push(v);
+      return true;
     }
-    var v = 0;
-    for (var k = 0; k < vals.length; k++) v += vals[k];
-    if (!isFinite(v)) return null;
-    return Math.round(v);
+    for (var t = 0; t < toks.length; t++) {
+      if (t % 2 === 0) { vals.push(calcRat(toks[t])); continue; }
+      var cur = toks[t];
+      while (ops.length) {                    /* *,/ 가 +,- 보다 먼저 */
+        var top = ops[ops.length - 1];
+        if (top === '*' || top === '/' || (cur !== '*' && cur !== '/')) {
+          if (!apply()) return null;
+        } else break;
+      }
+      ops.push(cur);
+    }
+    while (ops.length) if (!apply()) return null;
+    var q = calcRound(vals[0]);
+    var MAX = BigInt('9007199254740991');      /* Number 로 정확히 옮길 수 있는 한계 */
+    if (q > MAX || q < -MAX) return null;
+    return Number(q);
   }
 
   function findBudgetAt(db, today) {
@@ -1583,7 +1624,11 @@ var App = (function () {
   function calcFmtExp(expr) {
     return String(expr || '')
       .replace(/[+\-\u2212×÷]/g, function (m) { return ' ' + m + ' '; })
-      .replace(/\d+/g, function (m) { return Number(m).toLocaleString('ko-KR'); })
+      .replace(/\d+(?:\.\d*)?/g, function (m) {
+        var p = m.split('.');
+        var head = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return p.length > 1 ? head + '.' + p[1] : head;
+      })
       .replace(/\s+/g, ' ').trim();
   }
   function calcBtnHtml(id) {
@@ -1598,7 +1643,7 @@ var App = (function () {
       ['7', ''], ['8', ''], ['9', ''], ['−', 'op'],
       ['4', ''], ['5', ''], ['6', ''], ['+', 'op'],
       ['1', ''], ['2', ''], ['3', ''], ['=', 'eq'],
-      ['0', 'zero'], ['00', '']
+      ['0', ''], ['00', ''], ['.', '']
     ];
     var h = '<div class="calcpanel" id="calc-panel"><div class="calcline">' +
       '<div class="exp" id="calc-exp"></div><div class="eq" id="calc-eq"></div></div><div class="calcgrid">';
@@ -1671,9 +1716,16 @@ var App = (function () {
       if (CALC_OPS.indexOf(last) >= 0) c.expr = c.expr.slice(0, -1) + k;   /* 연산자 연속 입력은 교체 */
       else c.expr += k;
       c.fresh = false;
+    } else if (k === '.') {
+      var segd = c.expr.split(/[+\-\u2212×÷]/).pop();
+      if (segd.indexOf('.') >= 0) return;      /* 한 숫자 안에 소수점은 한 번만 */
+      if (c.fresh) c.expr = '0.';               /* = 뒤에는 새 숫자 0.5 로 */
+      else if (!segd) c.expr += '0.';           /* 처음·연산자 뒤에는 0.5 로 */
+      else c.expr += '.';
+      c.fresh = false;
     } else {
       var seg = c.expr.split(/[+\-\u2212×÷]/).pop();
-      if (seg.replace(/[^0-9]/g, '').length >= 12) return;             /* 한 숫자 12자리(조) 까지 */
+      if (seg.replace(/[^0-9]/g, '').length + k.length > 12) return;   /* 한 숫자 12자리(조) 까지 */
       if (c.fresh) { c.expr = k; c.fresh = false; }
       else c.expr = (c.expr + k).replace(/^0+(?=\d)/, '');
     }
